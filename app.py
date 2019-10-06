@@ -87,6 +87,28 @@ class User(spotify.models.User):
             except: break
         return tracks
 
+    async def _refreshing_token(self, expires: int, token: str):
+        while True:
+            import asyncio
+            await asyncio.sleep(expires-1)
+            REFRESH_TOKEN_URL = "https://accounts.spotify.com/api/token?grant_type=refresh_token&refresh_token={refresh_token}"
+            route = ("POST", REFRESH_TOKEN_URL.format(refresh_token=token))
+            from base64 import b64encode
+            auth = b64encode(":".join((os.environ['SPOTIFY_CLIENT_ID'], os.environ['SPOTIFY_CLIENT_SECRET'])).encode())
+            try:
+                data = await self.client.http.request(
+                    route,
+                    headers={"Content-Type": "application/x-www-form-urlencoded",
+                             "Authorization": f"Basic {auth.decode()}"}
+                )
+
+                expires = data["expires_in"]
+                self.http.token = data["access_token"]
+                print('token refreshed', data["access_token"])
+            except:
+                import traceback
+                traceback.print_exc()
+
 users = {}
 
 def get_user() -> User:
@@ -125,7 +147,8 @@ host_playlists : Dict[int, HostPlaylist] = {}
 async def host():
     user = get_user()
     host_playlists[user.id] = await user.get_host_playlist()
-    return url_for('participate', _external=True, host_id=user.id)
+    participate = url_for('participate', _external=True, host_id=user.id)
+    return f"<a href='{participate}'>{participate}</a>"
 
 
 @app.route('/participate/<host_id>', defaults={'playlist_name': None})
@@ -137,8 +160,16 @@ async def participate(host_id, playlist_name):
     most_common = await host_playlist.add_tracks(user, playlist_name)
     return jsonify(dict(
         users=[user.display_name for user in host_playlist.users],
-        songs=[track.name for track in most_common]
+        common_songs=[track.name for track in most_common]
     ))
+
+
+@app.route('/rest')
+def reset():
+    global users, host_playlists
+    users = {}
+    host_playlists = {}
+    return "great success"
 
 
 # Serve React App #################################################################################
