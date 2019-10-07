@@ -1,5 +1,5 @@
 import os, functools, collections
-from typing import Dict
+from typing import Dict, Tuple
 from quart import Quart, jsonify, url_for, request, send_from_directory, redirect, session
 import spotify
 
@@ -73,11 +73,15 @@ async def spotify_authorized():
 class User(spotify.models.User):
 
     async def get_playlist(self, name):
-        playlists = await self.get_playlists()
+        # Ideally I could request playlist by name
+        playlists = await self.get_playlists(limit=50)
         return next((p for p in playlists if p.name == name), None)
 
-    async def get_host_playlist(self, name="intersection"):
-        playlist = await self.get_playlist(name) or await self.create_playlist(name)
+    async def get_host_playlist(self, name):
+        full_name = f"Intersection - {name}"
+        playlist = await self.get_playlist(full_name)
+        if playlist is None: # Empty playlist is considered False!!!
+            playlist = await self.create_playlist(full_name)
         return HostPlaylist.cast(playlist)
 
     async def get_all_tracks(self):
@@ -87,6 +91,7 @@ class User(spotify.models.User):
             except: break
         return tracks
 
+    # Fix token refreshing until github owner releases fix
     async def _refreshing_token(self, expires: int, token: str):
         while True:
             import asyncio
@@ -139,25 +144,24 @@ class HostPlaylist(spotify.models.Playlist):
         await self.replace_tracks(*most_common)
         return most_common
 
-host_playlists : Dict[int, HostPlaylist] = {}
+host_playlists : Dict[Tuple[str, str], HostPlaylist] = {}
 
 
-@app.route('/host')
+@app.route('/host/<name>')
 @require_user
-async def host():
+async def host(name):
     user = get_user()
-    host_playlists[user.id] = await user.get_host_playlist()
-    participate = url_for('participate', _external=True, host_id=user.id)
+    host_playlists[(user.id, name)] = await user.get_host_playlist(name)
+    participate = url_for('participate', _external=True, host_id=user.id, name=name)
     return f"<a href='{participate}'>{participate}</a>"
 
 
-@app.route('/participate/<host_id>', defaults={'playlist_name': None})
-@app.route('/participate/<host_id>/<playlist_name>')
+@app.route('/participate/<host_id>/<name>')
 @require_user
-async def participate(host_id, playlist_name):
+async def participate(host_id, name):
     user = get_user()
-    host_playlist = host_playlists[host_id]
-    most_common = await host_playlist.add_tracks(user, playlist_name)
+    host_playlist = host_playlists[(host_id, name)]
+    most_common = await host_playlist.add_tracks(user)
     return jsonify(dict(
         users=[user.display_name for user in host_playlist.users],
         common_songs=[track.name for track in most_common]
