@@ -9,6 +9,9 @@ root = Path(__file__).parent
 app = Quart(__name__, static_folder='build')
 app.secret_key = 'sup3rsp1cy'
 
+from quart_cors import cors
+app = cors(app, allow_origin="*")
+
 # OAuth ###########################################################################################
 
 scopes = """
@@ -43,7 +46,7 @@ def require_user(func):
     @functools.wraps(func)
     def wrap(*args, **kwds):
         if not get_user():
-            if request.is_json: # quart doesn't have is_xhr...
+            if request.is_json: # quart is missing is_xhr...
                 return "login required", 401
             else:
                 session['next'] = request.path
@@ -72,18 +75,8 @@ async def spotify_authorized():
 
 class User(spotify.models.User):
 
-    async def get_playlist(self, name):
-        # Ideally I could request playlist by name
-        playlists = await self.get_playlists(limit=50)
-        return next((p for p in playlists if p.name == name), None)
-
-    async def get_host_playlist(self, name):
-        full_name = f"Intersection - {name}"
-        playlist = await self.get_playlist(full_name)
-        if playlist is None: # Empty playlist is considered False!!!
-            playlist = await self.create_playlist(full_name)
-        return HostPlaylist.cast(playlist)
-
+    # TODO self.library.get_all_tracks is being added shortly so this can go away
+    # https://github.com/mental32/spotify.py/issues/22
     async def get_all_tracks(self):
         tracks = []
         for i in range(100):
@@ -91,7 +84,9 @@ class User(spotify.models.User):
             except: break
         return tracks
 
-    # Fix token refreshing until github owner releases fix
+    # Temporary fix to get token refreshing working
+    # https://github.com/mental32/spotify.py/issues/20
+    # Waiting for pull request to get pushed to pypy so I can get rid of this
     async def _refreshing_token(self, expires: int, token: str):
         while True:
             import asyncio
@@ -121,28 +116,40 @@ def get_user() -> User:
 
 
 class HostPlaylist(spotify.models.Playlist):
+
     @classmethod
-    def cast(cls, playlist):
-        playlist.__class__ = cls
-        playlist.users = {}
-        return playlist
+    async def create(cls, owner, name, latLng=None):
+        full_name = f"Intersection - {name}"
+        playlists = await owner.get_playlists(limit=50) # get_all_playlists is being added soon...
+        self = next((p for p in playlists if p.name == full_name), None)
+        if self is None: # Empty playlist is considered False!!!
+            self = await owner.create_playlist(full_name)
 
-    async def add_tracks(self, user, playlist_name=None):
-        if playlist_name:
-            playlist = await user.get_playlist(playlist_name)
-            if not playlist: raise LookupError(playlist_name)
-            tracks = await playlist.get_all_tracks()
-        else:
-            tracks = await user.get_all_tracks()
+        self.__class__ = cls
+        self.owner = owner
+        self.name  = name
+        self.latLng = latLng
+        self.users = {}
+        self.join_url = url_for('join', _external=True, owner_id=owner.id, name=name)
+        return self
 
+    async def add_tracks(self, user, tracks):
         self.users[user] = tracks
-
         counter = collections.Counter(track for user_tracks in self.users.values() for track in user_tracks)
-        common_likes = [(track, count) for track, count in counter.items() if count > 1]
-        ordered = sorted(common_likes, key=lambda x: x[1], reverse=True)
+        common = [(track, count) for track, count in counter.items() if count > 1]
+        ordered = sorted(common, key=lambda x: x[1], reverse=True)
         most_common = [track for track, count in ordered]
         await self.replace_tracks(*most_common)
         return most_common
+
+    def to_dict(self):
+        return dict(
+            owner    = self.owner.display_name,
+            name     = self.name,
+            latLng   = self.latLng,
+            users    = [user.display_name for user in self.users],
+            join_url = self.join_url
+        )
 
 host_playlists : Dict[Tuple[str, str], HostPlaylist] = {}
 
@@ -151,30 +158,62 @@ host_playlists : Dict[Tuple[str, str], HostPlaylist] = {}
 @require_user
 async def host(name):
     user = get_user()
-    host_playlists[(user.id, name)] = await user.get_host_playlist(name)
-    participate = url_for('participate', _external=True, host_id=user.id, name=name)
-    return f"<a href='{participate}'>{participate}</a>"
+    latLng = to_floats(request.args.get("latLng"))
+    playlist = await HostPlaylist.create(user, name, latLng)
+    host_playlists[(user.id, name)] = playlist
+    return playlist.to_dict()
 
 
-@app.route('/participate/<host_id>/<name>')
+@app.route('/find')
+async def find():
+    playlists = host_playlists.values()
+    latLng = to_floats(request.args.get('latLng'))
+    if latLng:
+        radius = request.args.get('radius', 100)
+        from geopy.distance import distance
+        def close(playlist):
+            return playlist.latLng and distance(latLng, playlist.latLng).m < radius
+        playlists = [p for p in playlists if close(p)]
+
+    return jsonify([p.to_dict() for p in playlists])
+
+
+@app.route('/join/<owner_id>/<name>')
 @require_user
-async def participate(host_id, name):
+async def join(owner_id, name):
     user = get_user()
-    host_playlist = host_playlists[(host_id, name)]
-    most_common = await host_playlist.add_tracks(user)
-    return jsonify(dict(
-        users=[user.display_name for user in host_playlist.users],
-        common_songs=[track.name for track in most_common]
-    ))
+    host_playlist = host_playlists[(owner_id, name)]
+
+    if request.args.get('give') == 'playlists':
+        playlists = await user.get_playlists(limit=50) # get_all_playlists is being added soon...
+        # TODO Need to compare ids since owner.__class__ != self.__class__
+        owned = [p for p in playlists if p.owner.id == user.id]
+        tracks = [track for playlist in owned for track in await playlist.get_all_tracks()]
+    else:
+        tracks = await user.get_all_tracks()
+
+    most_common = await host_playlist.add_tracks(user, tracks)
+    # user.follow_playlist(host_playlist) uncomment when added to pypy
+    return host_playlist.to_dict()
 
 
-@app.route('/rest')
+@app.route("/leave/<owner_id>/<name>")
+@require_user
+def leave(owner_id, name):
+    user = get_user()
+    host_playlist = host_playlists[(owner_id, name)]
+    del host_playlist.users[user]
+
+
+@app.route('/reset')
 def reset():
     global users, host_playlists
     users = {}
     host_playlists = {}
     return "great success"
 
+
+to_floats = lambda val: val and [float(v) for v in val.split(",")]
 
 # Serve React App #################################################################################
 

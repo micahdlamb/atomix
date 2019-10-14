@@ -9,6 +9,8 @@ verify_ssl = true
 quart = "*"
 requests-async = "*"
 spotify = "*"
+quart-cors = "*"
+geopy = "*"
 
 [requires]
 python_version = "3.7"
