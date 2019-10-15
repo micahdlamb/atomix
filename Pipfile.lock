@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "f0a8121a2e2a0a2e349762ab00857887dbfa23654025564950dfa6448a5854ec"
+            "sha256": "338a3a59016353c866651a07d6c5b509acb6f555e85980e0702364a3d4928e62"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -240,14 +240,6 @@
             "index": "pypi",
             "version": "==0.10.0"
         },
-        "quart-cors": {
-            "hashes": [
-                "sha256:3b9e7fee3b564249c9264677c45417f3cdba2531db3b3d2b2b863bde75a34297",
-                "sha256:b45367f4b4b198bfb2884038a6ab14f7ea82fbb03ce7def7233dfd5d2a8220cd"
-            ],
-            "index": "pypi",
-            "version": "==0.2.0"
-        },
         "requests": {
             "hashes": [
                 "sha256:11e007a8a2aa0323f5a921e9e6a2d7e4e67d9877e85773fba9ba6419025cbeb4",
@@ -278,10 +270,10 @@
         },
         "spotify": {
             "hashes": [
-                "sha256:4fad7d849d1b2f70e64acb51bb99dec5deb1231411d2af730cfde6b1b2f56a00"
+                "sha256:afb29bb410659b4945aaf1df97f529a5cddd6110929627bd684ff0e9909dd9be"
             ],
             "index": "pypi",
-            "version": "==0.6.3"
+            "version": "==0.7.0"
         },
         "toml": {
             "hashes": [

@@ -2,6 +2,7 @@ import os, functools, collections
 from typing import Dict, Tuple
 from quart import Quart, jsonify, url_for, request, send_from_directory, redirect, session
 import spotify
+from spotify.models import User
 
 from pathlib import Path
 root = Path(__file__).parent
@@ -9,8 +10,8 @@ root = Path(__file__).parent
 app = Quart(__name__, static_folder='build')
 app.secret_key = 'sup3rsp1cy'
 
-from quart_cors import cors
-app = cors(app, allow_origin="*")
+# from quart_cors import cors
+# app = cors(app, allow_origin="*")
 
 # OAuth ###########################################################################################
 
@@ -73,42 +74,7 @@ async def spotify_authorized():
 
 # Main ############################################################################################
 
-class User(spotify.models.User):
-
-    # TODO self.library.get_all_tracks is being added shortly so this can go away
-    # https://github.com/mental32/spotify.py/issues/22
-    async def get_all_tracks(self):
-        tracks = []
-        for i in range(100):
-            try:    tracks.extend(await self.library.get_tracks(limit=50, offset=50*i))
-            except: break
-        return tracks
-
-    # Temporary fix to get token refreshing working
-    # https://github.com/mental32/spotify.py/issues/20
-    # Waiting for pull request to get pushed to pypy so I can get rid of this
-    async def _refreshing_token(self, expires: int, token: str):
-        while True:
-            import asyncio
-            await asyncio.sleep(expires-1)
-            REFRESH_TOKEN_URL = "https://accounts.spotify.com/api/token?grant_type=refresh_token&refresh_token={refresh_token}"
-            route = ("POST", REFRESH_TOKEN_URL.format(refresh_token=token))
-            from base64 import b64encode
-            auth = b64encode(":".join((os.environ['SPOTIFY_CLIENT_ID'], os.environ['SPOTIFY_CLIENT_SECRET'])).encode())
-            try:
-                data = await self.client.http.request(
-                    route,
-                    headers={"Content-Type": "application/x-www-form-urlencoded",
-                             "Authorization": f"Basic {auth.decode()}"}
-                )
-
-                expires = data["expires_in"]
-                self.http.token = data["access_token"]
-                print('token refreshed', data["access_token"])
-            except:
-                import traceback
-                traceback.print_exc()
-
+# TODO users are sitting in here forever refreshing their tokens
 users = {}
 
 def get_user() -> User:
@@ -130,6 +96,7 @@ class HostPlaylist(spotify.models.Playlist):
         self.name  = name
         self.latLng = latLng
         self.users = {}
+        self._tracks = []
         self.join_url = url_for('join', _external=True, owner_id=owner.id, name=name)
         return self
 
@@ -140,7 +107,9 @@ class HostPlaylist(spotify.models.Playlist):
         ordered = sorted(common, key=lambda x: x[1], reverse=True)
         most_common = [track for track, count in ordered]
         await self.replace_tracks(*most_common)
-        return most_common
+        # TODO Ask about base playlist code being so broken...
+        # self.tracks looks like it is supposed to work, but it doesn't
+        self._tracks = most_common
 
     def to_dict(self):
         return dict(
@@ -148,7 +117,9 @@ class HostPlaylist(spotify.models.Playlist):
             name     = self.name,
             latLng   = self.latLng,
             users    = [user.display_name for user in self.users],
-            join_url = self.join_url
+            join_url = self.join_url,
+            url      = self.url,
+            tracks   = [track.name for track in self._tracks]
         )
 
 host_playlists : Dict[Tuple[str, str], HostPlaylist] = {}
@@ -185,15 +156,16 @@ async def join(owner_id, name):
     host_playlist = host_playlists[(owner_id, name)]
 
     if request.args.get('give') == 'playlists':
-        playlists = await user.get_playlists(limit=50) # get_all_playlists is being added soon...
-        # TODO Need to compare ids since owner.__class__ != self.__class__
-        owned = [p for p in playlists if p.owner.id == user.id]
+        playlists = await user.get_all_playlists()
+        owned = [p for p in playlists if p.owner == user]
         tracks = [track for playlist in owned for track in await playlist.get_all_tracks()]
+        # Remove local songs.  {} since song can be in multi playlists
+        tracks = {track for track in tracks if track.uri.startswith("spotify:track")}
     else:
-        tracks = await user.get_all_tracks()
+        tracks = await user.library.get_all_tracks()
 
-    most_common = await host_playlist.add_tracks(user, tracks)
-    # user.follow_playlist(host_playlist) uncomment when added to pypy
+    await host_playlist.add_tracks(user, tracks)
+    user.follow_playlist(host_playlist)
     return host_playlist.to_dict()
 
 
