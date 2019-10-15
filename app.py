@@ -165,7 +165,8 @@ async def join(owner_id, name):
         tracks = await user.library.get_all_tracks()
 
     await host_playlist.add_tracks(user, tracks)
-    user.follow_playlist(host_playlist)
+    if user != host_playlist.owner:
+        await user.follow_playlist(host_playlist)
     return host_playlist.to_dict()
 
 
