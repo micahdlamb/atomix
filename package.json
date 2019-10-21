@@ -1,8 +1,6 @@
 {
-  "name": "material-kit-react",
-  "version": "1.8.0",
-  "description": "Material Kit React. Coded by Creative Tim",
-  "private": true,
+  "name": "intersection",
+  "description": "Frontend React App",
   "main": "dist/index.js",
   "dependencies": {
     "@material-ui/core": "4.3.2",
@@ -57,5 +55,6 @@
       "not op_mini all"
     ],
     "development": []
-  }
+  },
+  "proxy": "http://localhost:5000"
 }

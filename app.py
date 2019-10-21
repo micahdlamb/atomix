@@ -75,6 +75,7 @@ async def spotify_authorized():
 # Main ############################################################################################
 
 # TODO users are sitting in here forever refreshing their tokens
+# Need to update spotify.py to refresh token when a request fails due to expired token
 users = {}
 
 def get_user() -> User:
@@ -86,7 +87,7 @@ class HostPlaylist(spotify.models.Playlist):
     @classmethod
     async def create(cls, owner, name, latLng=None):
         full_name = f"Intersection - {name}"
-        playlists = await owner.get_playlists(limit=50) # get_all_playlists is being added soon...
+        playlists = await owner.get_all_playlists()
         self = next((p for p in playlists if p.name == full_name), None)
         if self is None: # Empty playlist is considered False!!!
             self = await owner.create_playlist(full_name)
@@ -97,7 +98,7 @@ class HostPlaylist(spotify.models.Playlist):
         self.latLng = latLng
         self.users = {}
         self._tracks = []
-        self.join_url = url_for('join', _external=True, owner_id=owner.id, name=name)
+        self.join_url = url_for('join_playlist', _external=True, playlist_id=self.id)
         return self
 
     async def add_tracks(self, user, tracks):
@@ -122,21 +123,29 @@ class HostPlaylist(spotify.models.Playlist):
             tracks   = [track.name for track in self._tracks]
         )
 
-host_playlists : Dict[Tuple[str, str], HostPlaylist] = {}
+host_playlists : Dict[str, HostPlaylist] = {}
 
 
-@app.route('/host/<name>')
+@app.route('/playlist/<name>', methods=['POST'])
 @require_user
-async def host(name):
+async def create_playlist(name):
     user = get_user()
-    latLng = to_floats(request.args.get("latLng"))
-    playlist = await HostPlaylist.create(user, name, latLng)
-    host_playlists[(user.id, name)] = playlist
+    kwds = await request.json
+    playlist = await HostPlaylist.create(user, name, **kwds)
+    host_playlists[playlist.id] = playlist
     return playlist.to_dict()
 
 
-@app.route('/find')
-async def find():
+@app.route('/playlist', methods=['GET'])
+@require_user
+def get_playlists():
+    user = get_user()
+    playlists = [playlist for playlist in host_playlists.values() if user in playlist.users]
+    return jsonify([playlist.to_dict() for playlist in reversed(playlists)])
+
+
+@app.route('/find/playlist')
+async def find_playlists():
     playlists = host_playlists.values()
     latLng = to_floats(request.args.get('latLng'))
     if latLng:
@@ -149,11 +158,11 @@ async def find():
     return jsonify([p.to_dict() for p in playlists])
 
 
-@app.route('/join/<owner_id>/<name>')
+@app.route('/join/playlist/<playlist_id>')
 @require_user
-async def join(owner_id, name):
+async def join_playlist(playlist_id):
     user = get_user()
-    host_playlist = host_playlists[(owner_id, name)]
+    host_playlist = host_playlists[playlist_id]
 
     if request.args.get('give') == 'playlists':
         playlists = await user.get_all_playlists()
@@ -170,11 +179,11 @@ async def join(owner_id, name):
     return host_playlist.to_dict()
 
 
-@app.route("/leave/<owner_id>/<name>")
+@app.route("/playlist/leave/<playlist_id>")
 @require_user
-def leave(owner_id, name):
+def leave_playlist(playlist_id):
     user = get_user()
-    host_playlist = host_playlists[(owner_id, name)]
+    host_playlist = host_playlists[playlist_id]
     del host_playlist.users[user]
 
 
@@ -187,6 +196,15 @@ def reset():
 
 
 to_floats = lambda val: val and [float(v) for v in val.split(",")]
+
+
+def cleanup():
+    for playlist in host_playlists.values():
+        "delete playlist"
+
+import atexit
+atexit.register(cleanup)
+
 
 # Serve React App #################################################################################
 
