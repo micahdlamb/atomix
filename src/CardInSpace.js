@@ -12,6 +12,7 @@ import CardFooter from "components/Card/CardFooter.js";
 import { makeStyles } from "@material-ui/core/styles";
 import { container } from "assets/jss/material-kit-react.js";
 import image from "assets/img/bg7.jpg";
+import CustomTabs from "components/CustomTabs/CustomTabs.js";
 
 const styles = {
   container: {
@@ -78,7 +79,7 @@ const useStyles = makeStyles(styles);
 
 const dashboardRoutes = [];
 
-export default function DefaultLayout({children, ...rest}) {
+export default function DefaultLayout({tabs, children, ...rest}) {
   const classes = useStyles();
 
   const [cardAnimaton, setCardAnimation] = React.useState("cardHidden");
@@ -110,17 +111,26 @@ export default function DefaultLayout({children, ...rest}) {
       >
         <div className={classes.container}>
           <GridContainer justify="center">
+            {/* TODO Grid breakpoints don't match page breakpoints which causes jumpiness when resizing */}
             <GridItem lg={8}>
-              <Card className={classes[cardAnimaton]}>
-                <CardHeader color="primary" className={classes.cardHeader}>
-                  <h4>Playlists</h4>
-                </CardHeader>
-                <CardBody>
-                  {children}
-                </CardBody>
-                <CardFooter className={classes.cardFooter}>
-                </CardFooter>
-              </Card>
+              {tabs ?
+                <CustomTabs
+                  className={classes[cardAnimaton]}
+                  headerColor="primary"
+                  tabs={tabs}
+                />
+              :
+                <Card className={classes[cardAnimaton]}>
+                  <CardHeader color="primary" className={classes.cardHeader}>
+                    <h4>Playlists</h4>
+                  </CardHeader>
+                  <CardBody>
+                    {children}
+                  </CardBody>
+                  <CardFooter className={classes.cardFooter}>
+                  </CardFooter>
+                </Card>
+              }
             </GridItem>
           </GridContainer>
         </div>

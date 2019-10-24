@@ -36,15 +36,6 @@ export default function HeaderLinks(props) {
           <icons.MusicNote className={classes.icons} /> Playlists
         </Link>
       </ListItem>
-      <ListItem className={classes.listItem}>
-        <Link
-          to="find"
-          color="transparent"
-          className={classes.navLink}
-        >
-          <icons.Search className={classes.icons} /> Find
-        </Link>
-      </ListItem>
 
       {/* <ListItem className={classes.listItem}>
         <CustomDropdown

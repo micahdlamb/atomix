@@ -6,12 +6,16 @@ export function joinPlaylist(playlist_id, give='likes'){
     return post(`join/playlist/${playlist_id}`, {give})
 }
 
-export function getPlaylists(){
-    return get(`playlist`)
+export function getMyPlaylists(){
+    return get(`playlist/mine`)
 }
 
-export function findPlaylists(latLng=undefined){
-    return get('playlist/find')
+export function getJoinedPlaylists(){
+    return get(`playlist/joined`)
+}
+
+export function findPlaylists(latLng){
+    return get(`playlist/find?latLng=${latLng.join(',')}`)
 }
 
 export function get(url){

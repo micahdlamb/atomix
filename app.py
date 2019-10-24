@@ -87,6 +87,7 @@ class HostPlaylist(spotify.models.Playlist):
     @classmethod
     async def create(cls, owner, name, latLng=None):
         full_name = f"Intersection - {name}"
+        # Reusing same playlist is convenient for development
         playlists = await owner.get_all_playlists()
         self = next((p for p in playlists if p.name == full_name), None)
         if self is None: # Empty playlist is considered False!!!
@@ -114,6 +115,7 @@ class HostPlaylist(spotify.models.Playlist):
 
     def to_dict(self):
         return dict(
+            id       = self.id,
             owner    = self.owner.display_name,
             name     = self.name,
             latLng   = self.latLng,
@@ -136,15 +138,23 @@ async def create_playlist(name):
     return playlist.to_dict()
 
 
-@app.route('/playlist', methods=['GET'])
+@app.route('/playlist/mine', methods=['GET'])
 @require_user
-def get_playlists():
+def get_my_playlists():
+    user = get_user()
+    playlists = [playlist for playlist in host_playlists.values() if user == playlist.owner]
+    return jsonify([playlist.to_dict() for playlist in reversed(playlists)])
+
+
+@app.route('/playlist/joined', methods=['GET'])
+@require_user
+def get_joined_playlists():
     user = get_user()
     playlists = [playlist for playlist in host_playlists.values() if user in playlist.users]
     return jsonify([playlist.to_dict() for playlist in reversed(playlists)])
 
 
-@app.route('/find/playlist')
+@app.route('/playlist/find')
 async def find_playlists():
     playlists = host_playlists.values()
     latLng = to_floats(request.args.get('latLng'))
@@ -158,7 +168,7 @@ async def find_playlists():
     return jsonify([p.to_dict() for p in playlists])
 
 
-@app.route('/join/playlist/<playlist_id>')
+@app.route('/join/playlist/<playlist_id>', methods=['GET','POST'])
 @require_user
 async def join_playlist(playlist_id):
     user = get_user()
@@ -179,7 +189,7 @@ async def join_playlist(playlist_id):
     return host_playlist.to_dict()
 
 
-@app.route("/playlist/leave/<playlist_id>")
+@app.route("/leave/playlist/<playlist_id>")
 @require_user
 def leave_playlist(playlist_id):
     user = get_user()
@@ -198,6 +208,8 @@ def reset():
 to_floats = lambda val: val and [float(v) for v in val.split(",")]
 
 
+# Would be nice if this was possible during development... But there doesn't seem to be
+# a spotify api to delete a playlist
 def cleanup():
     for playlist in host_playlists.values():
         "delete playlist"
