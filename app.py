@@ -1,6 +1,6 @@
 import os, functools, collections
 from typing import Dict, Tuple
-from quart import Quart, jsonify, url_for, request, send_from_directory, redirect, session
+from quart import Quart, jsonify, url_for, request, send_from_directory, redirect, session, abort
 import spotify
 from spotify.models import User
 
@@ -48,7 +48,7 @@ def require_user(func):
     def wrap(*args, **kwds):
         if not get_user():
             if request.is_json: # quart is missing is_xhr...
-                return "login required", 401
+                abort(401)
             else:
                 session['next'] = request.path
                 return redirect(oauth2.url)
@@ -137,6 +137,25 @@ async def create_playlist(name):
     host_playlists[playlist.id] = playlist
     return playlist.to_dict()
 
+@app.route('/playlist/<playlist_id>', methods=['PUT'])
+@require_user
+async def update_playlist(playlist_id):
+    user = get_user()
+    playlist = host_playlists[playlist_id]
+    if (user != playlist.owner): abort(403)
+    kwds = await request.json
+    playlist.__dict__.update(kwds)
+    return playlist.to_dict()
+
+@app.route('/playlist/<playlist_id>', methods=['DELETE'])
+@require_user
+async def delete_playlist(playlist_id):
+    user = get_user()
+    playlist = host_playlists[playlist_id]
+    if (user != playlist.owner): abort(403)
+    del host_playlists[playlist_id]
+    return jsonify("success")
+
 
 @app.route('/playlist/mine', methods=['GET'])
 @require_user
@@ -145,14 +164,12 @@ def get_my_playlists():
     playlists = [playlist for playlist in host_playlists.values() if user == playlist.owner]
     return jsonify([playlist.to_dict() for playlist in reversed(playlists)])
 
-
 @app.route('/playlist/joined', methods=['GET'])
 @require_user
 def get_joined_playlists():
     user = get_user()
     playlists = [playlist for playlist in host_playlists.values() if user in playlist.users]
     return jsonify([playlist.to_dict() for playlist in reversed(playlists)])
-
 
 @app.route('/playlist/find')
 async def find_playlists():
@@ -172,24 +189,23 @@ async def find_playlists():
 @require_user
 async def join_playlist(playlist_id):
     user = get_user()
-    host_playlist = host_playlists[playlist_id]
+    playlist = host_playlists[playlist_id]
 
     if request.args.get('give') == 'playlists':
         playlists = await user.get_all_playlists()
         owned = [p for p in playlists if p.owner == user]
-        tracks = [track for playlist in owned for track in await playlist.get_all_tracks()]
+        tracks = [track for p in owned for track in await p.get_all_tracks()]
         # Remove local songs.  {} since song can be in multi playlists
         tracks = {track for track in tracks if track.uri.startswith("spotify:track")}
     else:
         tracks = await user.library.get_all_tracks()
 
-    await host_playlist.add_tracks(user, tracks)
-    if user != host_playlist.owner:
-        await user.follow_playlist(host_playlist)
-    return host_playlist.to_dict()
+    await playlist.add_tracks(user, tracks)
+    if user != playlist.owner:
+        await user.follow_playlist(playlist)
+    return playlist.to_dict()
 
-
-@app.route("/leave/playlist/<playlist_id>")
+@app.route("/leave/playlist/<playlist_id>", methods=['PUT'])
 @require_user
 def leave_playlist(playlist_id):
     user = get_user()
@@ -202,20 +218,10 @@ def reset():
     global users, host_playlists
     users = {}
     host_playlists = {}
-    return "great success"
+    return jsonify("great success")
 
 
 to_floats = lambda val: val and [float(v) for v in val.split(",")]
-
-
-# Would be nice if this was possible during development... But there doesn't seem to be
-# a spotify api to delete a playlist
-def cleanup():
-    for playlist in host_playlists.values():
-        "delete playlist"
-
-import atexit
-atexit.register(cleanup)
 
 
 # Serve React App #################################################################################

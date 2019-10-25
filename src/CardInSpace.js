@@ -4,10 +4,6 @@ import HeaderLinks from "components/Header/HeaderLinks.js";
 // core components
 import GridContainer from "components/Grid/GridContainer.js";
 import GridItem from "components/Grid/GridItem.js";
-import Card from "components/Card/Card.js";
-import CardBody from "components/Card/CardBody.js";
-import CardHeader from "components/Card/CardHeader.js";
-import CardFooter from "components/Card/CardFooter.js";
 // import Footer from "components/Footer/Footer.js";
 import { makeStyles } from "@material-ui/core/styles";
 import { container } from "assets/jss/material-kit-react.js";
@@ -58,28 +54,13 @@ const styles = {
       width: "100%"
     }
   },
-  cardHeader: {
-    width: "auto",
-    textAlign: "center",
-    marginLeft: "20px",
-    marginRight: "20px",
-    marginTop: "-40px",
-    padding: "20px 0",
-    marginBottom: "15px"
-  },
-  cardFooter: {
-    paddingTop: "0rem",
-    border: "0",
-    borderRadius: "6px",
-    justifyContent: "center !important"
-  },
 };
 
 const useStyles = makeStyles(styles);
 
 const dashboardRoutes = [];
 
-export default function DefaultLayout({tabs, children, ...rest}) {
+export default function DefaultLayout({tabs, ...rest}) {
   const classes = useStyles();
 
   const [cardAnimaton, setCardAnimation] = React.useState("cardHidden");
@@ -113,24 +94,11 @@ export default function DefaultLayout({tabs, children, ...rest}) {
           <GridContainer justify="center">
             {/* TODO Grid breakpoints don't match page breakpoints which causes jumpiness when resizing */}
             <GridItem lg={8}>
-              {tabs ?
-                <CustomTabs
-                  className={classes[cardAnimaton]}
-                  headerColor="primary"
-                  tabs={tabs}
-                />
-              :
-                <Card className={classes[cardAnimaton]}>
-                  <CardHeader color="primary" className={classes.cardHeader}>
-                    <h4>Playlists</h4>
-                  </CardHeader>
-                  <CardBody>
-                    {children}
-                  </CardBody>
-                  <CardFooter className={classes.cardFooter}>
-                  </CardFooter>
-                </Card>
-              }
+              <CustomTabs
+                className={classes[cardAnimaton]}
+                headerColor="primary"
+                tabs={tabs}
+              />
             </GridItem>
           </GridContainer>
         </div>

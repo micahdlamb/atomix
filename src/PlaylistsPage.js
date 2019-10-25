@@ -1,14 +1,13 @@
 import React, {useState, useEffect} from "react";
 import * as model from 'model'
 // @material-ui/core components
-import { Box } from '@material-ui/core';
+import { Box, CircularProgress } from '@material-ui/core';
 import { makeStyles } from "@material-ui/core/styles";
 import InputAdornment from "@material-ui/core/InputAdornment";
 // @material-ui/icons
 import * as icons from "@material-ui/icons";
 // core components
 import Button from "components/CustomButtons/Button.js";
-
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
@@ -17,13 +16,12 @@ import TableRow from '@material-ui/core/TableRow';
 import CustomInput from "components/CustomInput/CustomInput.js";
 import CardInSpace from './CardInSpace'
 
-// @material-ui/icons
-import Face from "@material-ui/icons/Face";
-import Chat from "@material-ui/icons/Chat";
-import Build from "@material-ui/icons/Build";
 
-import formStyle from './formStyle';
-const useStyles = makeStyles(formStyle);
+const useStyles = makeStyles({
+  inputIconsColor: {
+    color: "#495057"
+  }
+});
 
 export default function PlaylistsPage() {
 
@@ -32,23 +30,21 @@ export default function PlaylistsPage() {
       tabs={[
         {
           tabName: "Mine",
-          tabIcon: Face,
+          tabIcon: icons.PlaylistAdd,
           tabContent: <MyPlaylists/>
         },
         {
           tabName: "Joined",
-          tabIcon: Chat,
+          tabIcon: icons.DeviceHub,
           tabContent: <JoinedPlaylists/>
         },
         {
           tabName: "Find",
-          tabIcon: Build,
-          tabContent: "TODO"
+          tabIcon: icons.Search,
+          tabContent: <FindPlaylists/>
         }
       ]}
-    >
-
-    </CardInSpace>
+    />
   );
 }
 
@@ -121,7 +117,7 @@ function MyPlaylists(){
 
 function JoinedPlaylists(){
 
-  let [playlists, setPlaylists] = useState([])
+  let [playlists, setPlaylists] = useState(null)
 
   useEffect(() => {
     async function getPlaylists(){
@@ -130,6 +126,49 @@ function JoinedPlaylists(){
     }
     getPlaylists()
   }, [])
+
+  if (!playlists)
+    return <Box display='flex' justifyContent='center'><CircularProgress/></Box>
+  if (playlists.length === 0)
+    return <Box display='flex' justifyContent='center'>No joined playlists</Box>
+
+  return <>
+    <Table>
+      <TableBody>
+        {playlists.map(playlist =>
+          <TableRow key={playlist.id}>
+            <TableCell>
+              {playlist.name}
+            </TableCell>
+            <TableCell>
+              <a href={playlist.url} target='_blank' rel="noopener noreferrer"><icons.OpenInNew/></a>
+            </TableCell>
+            <TableCell>
+              <a href={playlist.join_url}><icons.Share/></a>
+            </TableCell>
+          </TableRow>
+        )}
+      </TableBody>
+    </Table>
+  </>
+}
+
+function FindPlaylists(){
+
+  let [playlists, setPlaylists] = useState(null)
+
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(async pos => {
+      let latLng = [pos.coords.latitude, pos.coords.longitude]
+      let playlists = await model.findPlaylists(latLng)
+      setPlaylists(playlists)
+    })
+  }, [])
+
+  if (!playlists)
+    return <Box display='flex' justifyContent='center'><CircularProgress/></Box>
+  if (playlists.length === 0)
+    return <Box display='flex' justifyContent='center'>No playlists found</Box>
 
   return <>
     <Table>

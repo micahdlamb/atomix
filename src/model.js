@@ -2,9 +2,14 @@ export function createPlaylist(name, latLng=undefined){
     return post(`playlist/${name}`, {latLng})
 }
 
-export function joinPlaylist(playlist_id, give='likes'){
-    return post(`join/playlist/${playlist_id}`, {give})
+export function updatePlaylist(playlist_id, latLng){
+    return put(`playlist/${playlist_id}`, {latLng})
 }
+
+export function deletePlaylist(playlist_id){
+    return del(`playlist/${playlist_id}`)
+}
+
 
 export function getMyPlaylists(){
     return get(`playlist/mine`)
@@ -18,15 +23,35 @@ export function findPlaylists(latLng){
     return get(`playlist/find?latLng=${latLng.join(',')}`)
 }
 
-export function get(url){
-    return fetch(url, {
-        credentials: 'include'
-    }).then(resp => resp.json())
+
+export function joinPlaylist(playlist_id, give='likes'){
+    return post(`join/playlist/${playlist_id}?give=${give}`)
 }
 
-export function post(url, body){
+export function leavePlaylist(playlist_id){
+    return put(`join/playlist/${playlist_id}`)
+}
+
+
+function get(url){
+    return fetchJson('GET', url)
+}
+
+function post(url, body){
+    return fetchJson('POST', url, body)
+}
+
+function put(url, body){
+    return fetchJson('PUT', url, body)
+}
+
+function del(url){
+    return fetchJson('DELETE', url)
+}
+
+function fetchJson(method, url, body){
     return fetch(url, {
-        method: 'POST',
+        method,
         credentials: 'include',
         headers: {
             'Content-Type': 'application/json'
