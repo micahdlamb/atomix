@@ -1,4 +1,5 @@
 import React, {useState, useEffect} from "react";
+import { Link } from "react-router-dom";
 import * as model from 'model'
 // @material-ui/core components
 import { Box, CircularProgress } from '@material-ui/core';
@@ -106,7 +107,7 @@ function MyPlaylists(){
               <a href={playlist.url} target='_blank' rel="noopener noreferrer"><icons.OpenInNew/></a>
             </TableCell>
             <TableCell>
-              <a href={playlist.join_url}><icons.Share/></a>
+              <Link to={`/join/${playlist.id}`}><icons.Share/></Link>
             </TableCell>
           </TableRow>
         )}
@@ -144,7 +145,7 @@ function JoinedPlaylists(){
               <a href={playlist.url} target='_blank' rel="noopener noreferrer"><icons.OpenInNew/></a>
             </TableCell>
             <TableCell>
-              <a href={playlist.join_url}><icons.Share/></a>
+              <Link to={`/join/${playlist.id}`}><icons.Share/></Link>
             </TableCell>
           </TableRow>
         )}
@@ -182,7 +183,7 @@ function FindPlaylists(){
               <a href={playlist.url} target='_blank' rel="noopener noreferrer"><icons.OpenInNew/></a>
             </TableCell>
             <TableCell>
-              <a href={playlist.join_url}><icons.Share/></a>
+              <Link to={`/join/${playlist.id}`}><icons.Share/></Link>
             </TableCell>
           </TableRow>
         )}

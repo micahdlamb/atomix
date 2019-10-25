@@ -128,7 +128,7 @@ class HostPlaylist(spotify.models.Playlist):
 host_playlists : Dict[str, HostPlaylist] = {}
 
 
-@app.route('/playlist/<name>', methods=['POST'])
+@app.route('/create/playlist/<name>', methods=['POST'])
 @require_user
 async def create_playlist(name):
     user = get_user()
@@ -137,7 +137,12 @@ async def create_playlist(name):
     host_playlists[playlist.id] = playlist
     return playlist.to_dict()
 
-@app.route('/playlist/<playlist_id>', methods=['PUT'])
+@app.route('/get/playlist/<playlist_id>', methods=['GET'])
+async def get_playlist(playlist_id):
+    playlist = host_playlists[playlist_id]
+    return playlist.to_dict()
+
+@app.route('/update/playlist/<playlist_id>', methods=['PUT'])
 @require_user
 async def update_playlist(playlist_id):
     user = get_user()
@@ -147,7 +152,7 @@ async def update_playlist(playlist_id):
     playlist.__dict__.update(kwds)
     return playlist.to_dict()
 
-@app.route('/playlist/<playlist_id>', methods=['DELETE'])
+@app.route('/delete/playlist/<playlist_id>', methods=['DELETE'])
 @require_user
 async def delete_playlist(playlist_id):
     user = get_user()
@@ -205,7 +210,7 @@ async def join_playlist(playlist_id):
         await user.follow_playlist(playlist)
     return playlist.to_dict()
 
-@app.route("/leave/playlist/<playlist_id>", methods=['PUT'])
+@app.route("/leave/playlist/<playlist_id>", methods=['POST'])
 @require_user
 def leave_playlist(playlist_id):
     user = get_user()

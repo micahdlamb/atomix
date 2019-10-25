@@ -29,7 +29,7 @@ export default function HeaderLinks(props) {
     <List className={classes.list}>
       <ListItem className={classes.listItem}>
         <Link
-          to="playlists"
+          to="/playlists"
           color="transparent"
           className={classes.navLink}
         >

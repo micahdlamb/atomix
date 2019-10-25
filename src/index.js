@@ -11,6 +11,7 @@ import ProfilePage from "views/ProfilePage/ProfilePage.js";
 import LoginPage from "views/LoginPage/LoginPage.js";
 
 import PlaylistsPage from "PlaylistsPage.js";
+import JoinPage from "JoinPage.js";
 
 import * as model from 'model.js'
 window.model = model
@@ -22,6 +23,7 @@ ReactDOM.render(
     <Switch>
       <Route exact path="/" component={LandingPage} />
       <Route path="/playlists" component={PlaylistsPage} />
+      <Route path="/join/:playlist_id" component={JoinPage}/>
 
       <Route path="/profile-page" component={ProfilePage} />
       <Route path="/login-page" component={LoginPage} />
