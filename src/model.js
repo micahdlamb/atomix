@@ -1,39 +1,40 @@
 export function createPlaylist(name, latLng=undefined){
-    return post(`/create/playlist/${name}`, {latLng})
+    return post(`/create_playlist/${name}`, {latLng})
 }
 
 export function getPlaylist(playlist_id){
-    return get(`/get/playlist/${playlist_id}`)
+    return get(`/get_playlist/${playlist_id}`)
 }
 
 export function updatePlaylist(playlist_id, latLng){
-    return put(`/update/playlist/${playlist_id}`, {latLng})
+    return put(`/update_playlist/${playlist_id}`, {latLng})
 }
 
 export function deletePlaylist(playlist_id){
-    return del(`/delete/playlist/${playlist_id}`)
+    return del(`/delete_playlist/${playlist_id}`)
 }
 
 
 export function getMyPlaylists(){
-    return get(`/playlist/mine`)
+    return get(`/get_my_playlists`)
 }
 
 export function getJoinedPlaylists(){
-    return get(`/playlist/joined`)
+    return get(`/get_joined_playlists`)
 }
 
-export function findPlaylists(latLng){
-    return get(`/playlist/find?latLng=${latLng.join(',')}`)
+export function findPlaylists(latLng, radius=100){
+    // radius in meters
+    return get(`/find_playlists?latLng=${latLng.join(',')}&radius=${radius}`)
 }
 
 
 export function joinPlaylist(playlist_id, give='likes'){
-    return post(`/join/playlist/${playlist_id}?give=${give}`)
+    return post(`/join_playlist/${playlist_id}?give=${give}`)
 }
 
 export function leavePlaylist(playlist_id){
-    return post(`/leave/playlist/${playlist_id}`)
+    return post(`/leave_playlist/${playlist_id}`)
 }
 
 

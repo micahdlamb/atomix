@@ -104,14 +104,21 @@ class HostPlaylist(spotify.models.Playlist):
 
     async def add_tracks(self, user, tracks):
         self.users[user] = tracks
+        await self._update_tracks()
+
+    async def remove_tracks(self, user):
+        del self.users[user]
+        await self._update_tracks()
+
+    async def _update_tracks(self):
         counter = collections.Counter(track for user_tracks in self.users.values() for track in user_tracks)
         common = [(track, count) for track, count in counter.items() if count > 1]
-        ordered = sorted(common, key=lambda x: x[1], reverse=True)
-        most_common = [track for track, count in ordered]
-        await self.replace_tracks(*most_common)
+        common_first = sorted(common, key=lambda x: x[1], reverse=True)
+        tracks = [track for track, count in common_first]
+        await self.replace_tracks(*tracks)
         # TODO Ask about base playlist code being so broken...
         # self.tracks looks like it is supposed to work, but it doesn't
-        self._tracks = most_common
+        self._tracks = tracks
 
     def to_dict(self):
         return dict(
@@ -120,7 +127,6 @@ class HostPlaylist(spotify.models.Playlist):
             name     = self.name,
             latLng   = self.latLng,
             users    = [user.display_name for user in self.users],
-            join_url = self.join_url,
             url      = self.url,
             tracks   = [track.name for track in self._tracks]
         )
@@ -128,7 +134,7 @@ class HostPlaylist(spotify.models.Playlist):
 host_playlists : Dict[str, HostPlaylist] = {}
 
 
-@app.route('/create/playlist/<name>', methods=['POST'])
+@app.route('/create_playlist/<name>', methods=['POST'])
 @require_user
 async def create_playlist(name):
     user = get_user()
@@ -137,12 +143,12 @@ async def create_playlist(name):
     host_playlists[playlist.id] = playlist
     return playlist.to_dict()
 
-@app.route('/get/playlist/<playlist_id>', methods=['GET'])
+@app.route('/get_playlist/<playlist_id>')
 async def get_playlist(playlist_id):
     playlist = host_playlists[playlist_id]
     return playlist.to_dict()
 
-@app.route('/update/playlist/<playlist_id>', methods=['PUT'])
+@app.route('/update_playlist/<playlist_id>', methods=['PUT'])
 @require_user
 async def update_playlist(playlist_id):
     user = get_user()
@@ -152,7 +158,7 @@ async def update_playlist(playlist_id):
     playlist.__dict__.update(kwds)
     return playlist.to_dict()
 
-@app.route('/delete/playlist/<playlist_id>', methods=['DELETE'])
+@app.route('/delete_playlist/<playlist_id>', methods=['DELETE'])
 @require_user
 async def delete_playlist(playlist_id):
     user = get_user()
@@ -162,21 +168,21 @@ async def delete_playlist(playlist_id):
     return jsonify("success")
 
 
-@app.route('/playlist/mine', methods=['GET'])
+@app.route('/get_my_playlists')
 @require_user
 def get_my_playlists():
     user = get_user()
     playlists = [playlist for playlist in host_playlists.values() if user == playlist.owner]
     return jsonify([playlist.to_dict() for playlist in reversed(playlists)])
 
-@app.route('/playlist/joined', methods=['GET'])
+@app.route('/get_joined_playlists')
 @require_user
 def get_joined_playlists():
     user = get_user()
     playlists = [playlist for playlist in host_playlists.values() if user in playlist.users]
     return jsonify([playlist.to_dict() for playlist in reversed(playlists)])
 
-@app.route('/playlist/find')
+@app.route('/find_playlists')
 async def find_playlists():
     playlists = host_playlists.values()
     latLng = to_floats(request.args.get('latLng'))
@@ -190,7 +196,7 @@ async def find_playlists():
     return jsonify([p.to_dict() for p in playlists])
 
 
-@app.route('/join/playlist/<playlist_id>', methods=['GET','POST'])
+@app.route('/join_playlist/<playlist_id>', methods=['GET','POST'])
 @require_user
 async def join_playlist(playlist_id):
     user = get_user()
@@ -210,12 +216,12 @@ async def join_playlist(playlist_id):
         await user.follow_playlist(playlist)
     return playlist.to_dict()
 
-@app.route("/leave/playlist/<playlist_id>", methods=['POST'])
+@app.route("/leave_playlist/<playlist_id>", methods=['POST'])
 @require_user
 def leave_playlist(playlist_id):
     user = get_user()
     host_playlist = host_playlists[playlist_id]
-    del host_playlist.users[user]
+    host_playlist.remove_tracks(user)
 
 
 @app.route('/reset')
