@@ -53,7 +53,7 @@ function MyPlaylists(){
   const classes = useStyles();
 
   let [name, setName] = useState("")
-  let [playlists, setPlaylists] = useState([])
+  let [playlists, setPlaylists] = useState(null)
 
   useEffect(() => {
     async function getPlaylists(){
@@ -66,8 +66,38 @@ function MyPlaylists(){
   async function handleSubmit(event){
     event.preventDefault()
     if (!name) return
+    // TODO need ui to input latLng. Maybe a google map
     let playlist = await model.createPlaylist(name)
     setPlaylists([playlist].concat(playlists))
+    // TODO need ui to input give=likes/playlists
+    model.joinPlaylist(playlist.id)
+  }
+
+  function renderPlaylists(){
+    if (!playlists)
+      return <Spinner/>
+    if (playlists.length === 0)
+      return <Message>Create a playlist...</Message>
+
+    return (
+      <Table>
+        <TableBody>
+          {playlists.map(playlist =>
+            <TableRow key={playlist.id}>
+              <TableCell>
+                {playlist.name}
+              </TableCell>
+              <TableCell>
+                <a href={playlist.url} target='_blank' rel="noopener noreferrer"><icons.OpenInNew/></a>
+              </TableCell>
+              <TableCell>
+                {sharePlaylistButton(playlist)}
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    )
   }
 
   return <>
@@ -95,24 +125,7 @@ function MyPlaylists(){
         </Button>
       </Box>
     </form>
-
-    <Table>
-      <TableBody>
-        {playlists.map(playlist =>
-          <TableRow key={playlist.id}>
-            <TableCell>
-              {playlist.name}
-            </TableCell>
-            <TableCell>
-              <a href={playlist.url} target='_blank' rel="noopener noreferrer"><icons.OpenInNew/></a>
-            </TableCell>
-            <TableCell>
-              <Link to={`/join/${playlist.id}`}><icons.Share/></Link>
-            </TableCell>
-          </TableRow>
-        )}
-      </TableBody>
-    </Table>
+    {renderPlaylists()}
   </>
 }
 
@@ -129,9 +142,9 @@ function JoinedPlaylists(){
   }, [])
 
   if (!playlists)
-    return <Box display='flex' justifyContent='center'><CircularProgress/></Box>
+    return <Spinner/>
   if (playlists.length === 0)
-    return <Box display='flex' justifyContent='center'>No joined playlists</Box>
+    return <Message>No joined playlists</Message>
 
   return <>
     <Table>
@@ -145,7 +158,7 @@ function JoinedPlaylists(){
               <a href={playlist.url} target='_blank' rel="noopener noreferrer"><icons.OpenInNew/></a>
             </TableCell>
             <TableCell>
-              <Link to={`/join/${playlist.id}`}><icons.Share/></Link>
+              {sharePlaylistButton(playlist)}
             </TableCell>
           </TableRow>
         )}
@@ -167,9 +180,9 @@ function FindPlaylists(){
   }, [])
 
   if (!playlists)
-    return <Box display='flex' justifyContent='center'><CircularProgress/></Box>
+    return <Spinner/>
   if (playlists.length === 0)
-    return <Box display='flex' justifyContent='center'>No playlists found</Box>
+    return <Message>No playlists found</Message>
 
   return <>
     <Table>
@@ -183,7 +196,7 @@ function FindPlaylists(){
               <a href={playlist.url} target='_blank' rel="noopener noreferrer"><icons.OpenInNew/></a>
             </TableCell>
             <TableCell>
-              <Link to={`/join/${playlist.id}`}><icons.Share/></Link>
+              {sharePlaylistButton(playlist)}
             </TableCell>
           </TableRow>
         )}
@@ -191,3 +204,26 @@ function FindPlaylists(){
     </Table>
   </>
 }
+
+let sharePlaylistButton = playlist =>
+  <ShareButton
+    title={`Join the ${playlist.name} Playlist! `}
+    text={`${playlist.owner} wants your musical input.`}
+    path={`/join/${playlist.id}`}
+  />
+
+function ShareButton({title, text, path}){
+  // navigator.share only exists on mobile and https
+  if (navigator.share){
+    let url = window.location.origin+path
+    let handleClick = event => navigator.share({title, text, url})
+    return <Button onClick={handleClick} color='primary'><icons.Share/></Button>
+  }
+
+  // Clicking this should show a copy link popup
+  return <Link to={path}><icons.Share/></Link>
+}
+
+// TODO why is it so hard to center something?
+let Spinner = ()           => <Box display='flex' justifyContent='center'><CircularProgress color='secondary'/></Box>
+let Message = ({children}) => <Box display='flex' justifyContent='center' m='1'>{children}</Box>

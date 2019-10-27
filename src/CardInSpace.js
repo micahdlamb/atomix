@@ -60,7 +60,7 @@ const useStyles = makeStyles(styles);
 
 const dashboardRoutes = [];
 
-export default function DefaultLayout({tabs, ...rest}) {
+export default function DefaultLayout({tabs, headerColor="primary", ...rest}) {
   const classes = useStyles();
 
   const [cardAnimaton, setCardAnimation] = React.useState("cardHidden");
@@ -96,7 +96,7 @@ export default function DefaultLayout({tabs, ...rest}) {
             <GridItem lg={8}>
               <CustomTabs
                 className={classes[cardAnimaton]}
-                headerColor="primary"
+                headerColor={headerColor}
                 tabs={tabs}
               />
             </GridItem>
