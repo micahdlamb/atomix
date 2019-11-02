@@ -249,6 +249,9 @@ def serve(path):
 
 # Run #############################################################################################
 
-# set QUART_APP=app:app && quart run --host=0.0.0.0 --port=80
+if 'HOST' in os.environ:
+    from hypercorn.middleware import HTTPToHTTPSRedirectMiddleware
+    redirected_app = HTTPToHTTPSRedirectMiddleware(app, os.environ['HOST'])
+
 if __name__ == '__main__':
     app.run(host="0.0.0.0", debug=True)
