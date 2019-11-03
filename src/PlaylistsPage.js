@@ -22,6 +22,12 @@ import CardInSpace from './CardInSpace'
 const useStyles = makeStyles({
   inputIconsColor: {
     color: "#495057"
+  },
+  table: {
+    '& td': {
+      textAlign: 'center',
+      padding: '0 !important'
+    }
   }
 });
 
@@ -41,9 +47,9 @@ export default function PlaylistsPage() {
           tabContent: <JoinedPlaylists/>
         },
         {
-          tabName: "Find",
+          tabName: "Nearby",
           tabIcon: icons.Search,
-          tabContent: <FindPlaylists/>
+          tabContent: <NearbyPlaylists/>
         }
       ]}
     />
@@ -52,10 +58,10 @@ export default function PlaylistsPage() {
 
 function MyPlaylists(){
   const classes = useStyles();
+  const { enqueueSnackbar } = useSnackbar();
 
   let [name, setName] = useState("")
   let [playlists, setPlaylists] = useState(null)
-  const { enqueueSnackbar } = useSnackbar();
 
   useEffect(() => {
     async function getPlaylists(){
@@ -80,10 +86,18 @@ function MyPlaylists(){
       var latLng = playlist.latLng ? null : await getLatLng()
     } catch (error){
       enqueueSnackbar(error.message, {variant: 'error'})
+      return
     }
     model.updatePlaylist(playlist.id, latLng)
     let newPlaylist = {...playlist, latLng}
     setPlaylists(playlists.map(p => p === playlist ? newPlaylist: p))
+    let variant = latLng ? 'success': 'info'
+    enqueueSnackbar(`${playlist.name} is ${latLng ? 'discoverable' : 'private'}`, {variant})
+  }
+
+  function deletePlaylist(playlist){
+    model.deletePlaylist(playlist.id)
+    setPlaylists(playlists.filter(p => p !== playlist))
   }
 
   function renderPlaylists(){
@@ -93,7 +107,7 @@ function MyPlaylists(){
       return <Message>Create a playlist...</Message>
 
     return (
-      <Table>
+      <Table className={classes.table}>
         <TableBody>
           {playlists.map(playlist =>
             <TableRow key={playlist.id}>
@@ -101,15 +115,22 @@ function MyPlaylists(){
                 {playlist.name}
               </TableCell>
               <TableCell>
-                <Button onClick={event => toggleFindable(playlist)} color='primary'>
+                <Button onClick={event => toggleFindable(playlist)} color='rose' round justIcon>
                   {playlist.latLng ? <icons.Visibility/>: <icons.VisibilityOff/>}
                 </Button>
               </TableCell>
               <TableCell>
-                <a href={playlist.url} target='_blank' rel="noopener noreferrer"><icons.OpenInNew/></a>
+                <Button href={playlist.url} target='_blank' rel="noopener noreferrer" color='info' round justIcon>
+                  <icons.OpenInNew/>
+                </Button>
               </TableCell>
               <TableCell>
                 {sharePlaylistButton(playlist)}
+              </TableCell>
+              <TableCell>
+                <Button onClick={event => deletePlaylist(playlist)} color='danger' round justIcon>
+                  <icons.Delete/>
+                </Button>
               </TableCell>
             </TableRow>
           )}
@@ -138,7 +159,7 @@ function MyPlaylists(){
             onChange: event => setName(event.target.value)
           }}
         />
-        <Button type="submit" simple color="primary" size="lg" disabled={!name}>
+        <Button type="submit" simple color="primary" disabled={!name}>
           Create
         </Button>
       </Box>
@@ -148,6 +169,7 @@ function MyPlaylists(){
 }
 
 function JoinedPlaylists(){
+  const classes = useStyles();
 
   let [playlists, setPlaylists] = useState(null)
 
@@ -159,13 +181,18 @@ function JoinedPlaylists(){
     getPlaylists()
   }, [])
 
+  function leavePlaylist(playlist){
+    model.leavePlaylist(playlist.id)
+    setPlaylists(playlists.filter(p => p !== playlist))
+  }
+
   if (!playlists)
     return <Spinner/>
   if (playlists.length === 0)
     return <Message>No joined playlists</Message>
 
   return <>
-    <Table>
+    <Table className={classes.table}>
       <TableBody>
         {playlists.map(playlist =>
           <TableRow key={playlist.id}>
@@ -173,10 +200,15 @@ function JoinedPlaylists(){
               {playlist.name}
             </TableCell>
             <TableCell>
-              <a href={playlist.url} target='_blank' rel="noopener noreferrer"><icons.OpenInNew/></a>
+              <Button href={playlist.url} target='_blank' rel="noopener noreferrer" color='info' round justIcon><icons.OpenInNew/></Button>
             </TableCell>
             <TableCell>
               {sharePlaylistButton(playlist)}
+            </TableCell>
+            <TableCell>
+              <Button onClick={event => leavePlaylist(playlist)} color='danger' round justIcon>
+                <icons.NotInterested/>
+              </Button>
             </TableCell>
           </TableRow>
         )}
@@ -185,7 +217,8 @@ function JoinedPlaylists(){
   </>
 }
 
-function FindPlaylists(){
+function NearbyPlaylists(){
+  const classes = useStyles();
 
   let [playlists, setPlaylists] = useState(null)
 
@@ -210,7 +243,7 @@ function FindPlaylists(){
     return <Message>No playlists found</Message>
 
   return <>
-    <Table>
+    <Table className={classes.table}>
       <TableBody>
         {playlists.map(playlist =>
           <TableRow key={playlist.id}>
@@ -218,10 +251,10 @@ function FindPlaylists(){
               {playlist.name}
             </TableCell>
             <TableCell>
-              <a href={playlist.url} target='_blank' rel="noopener noreferrer"><icons.OpenInNew/></a>
+              <Button href={playlist.url} target='_blank' rel="noopener noreferrer" color='info' round justIcon><icons.OpenInNew/></Button>
             </TableCell>
             <TableCell>
-              {sharePlaylistButton(playlist)}
+              <Button component={Link} to={`/join/${playlist.id}`} color='success' round justIcon><icons.ArrowForward/></Button>
             </TableCell>
           </TableRow>
         )}
@@ -242,11 +275,11 @@ function ShareButton({title, text, path}){
   if (navigator.share){
     let url = window.location.origin+path
     let handleClick = event => navigator.share({title, text, url})
-    return <Button onClick={handleClick} color='primary'><icons.Share/></Button>
+    return <Button onClick={handleClick} color='success' round justIcon><icons.Share/></Button>
   }
 
   // Clicking this should show a copy link popup
-  return <Link to={path}><icons.Share/></Link>
+  return <Button component={Link} to={path} color='success' round justIcon><icons.Share/></Button>
 }
 
 // TODO why is it so hard to center something?

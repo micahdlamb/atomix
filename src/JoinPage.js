@@ -29,7 +29,7 @@ export default function(props) {
           tabContent: <JoinPlaylist {...props}/>
         }
       ]}
-      headerColor='info'
+      headerColor='primary'
     />
   );
 }
@@ -62,7 +62,7 @@ function JoinPlaylist(){
   return <>
     <GridContainer style={{textAlign: 'center'}}>
       <GridItem sm={6}>
-        <Button onClick={join} color="rose" size="lg">Join {playlist.name}</Button>
+        <Button onClick={join} color="rose" size="lg" round>Join {playlist.name}</Button>
       </GridItem>
       <GridItem sm={6}>
         <FormControl component="fieldset">
