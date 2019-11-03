@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom";
 import { createBrowserHistory } from "history";
 import { Router, Route, Switch } from "react-router-dom";
+import { SnackbarProvider } from 'notistack';
 import "assets/scss/material-kit-react.scss?v=1.8.0";
 
 // pages for this product
@@ -19,16 +20,18 @@ window.model = model
 var hist = createBrowserHistory();
 
 ReactDOM.render(
-  <Router history={hist}>
-    <Switch>
-      <Route exact path="/" component={LandingPage} />
-      <Route path="/playlists" component={PlaylistsPage} />
-      <Route path="/join/:playlist_id" component={JoinPage}/>
+  <SnackbarProvider>
+    <Router history={hist}>
+      <Switch>
+        <Route exact path="/" component={LandingPage} />
+        <Route path="/playlists" component={PlaylistsPage} />
+        <Route path="/join/:playlist_id" component={JoinPage}/>
 
-      <Route path="/profile-page" component={ProfilePage} />
-      <Route path="/login-page" component={LoginPage} />
-      <Route path="/components" component={Components} />
-    </Switch>
-  </Router>,
+        <Route path="/profile-page" component={ProfilePage} />
+        <Route path="/login-page" component={LoginPage} />
+        <Route path="/components" component={Components} />
+      </Switch>
+    </Router>
+  </SnackbarProvider>,
   document.getElementById("root")
 );

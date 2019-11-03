@@ -5,6 +5,7 @@ import * as model from 'model'
 import { Box, CircularProgress } from '@material-ui/core';
 import { makeStyles } from "@material-ui/core/styles";
 import InputAdornment from "@material-ui/core/InputAdornment";
+import { useSnackbar } from 'notistack';
 // @material-ui/icons
 import * as icons from "@material-ui/icons";
 // core components
@@ -54,6 +55,7 @@ function MyPlaylists(){
 
   let [name, setName] = useState("")
   let [playlists, setPlaylists] = useState(null)
+  const { enqueueSnackbar } = useSnackbar();
 
   useEffect(() => {
     async function getPlaylists(){
@@ -73,6 +75,17 @@ function MyPlaylists(){
     model.joinPlaylist(playlist.id)
   }
 
+  async function toggleFindable(playlist){
+    try {
+      var latLng = playlist.latLng ? null : await getLatLng()
+    } catch (error){
+      enqueueSnackbar(error.message, {variant: 'error'})
+    }
+    model.updatePlaylist(playlist.id, latLng)
+    let newPlaylist = {...playlist, latLng}
+    setPlaylists(playlists.map(p => p === playlist ? newPlaylist: p))
+  }
+
   function renderPlaylists(){
     if (!playlists)
       return <Spinner/>
@@ -86,6 +99,11 @@ function MyPlaylists(){
             <TableRow key={playlist.id}>
               <TableCell>
                 {playlist.name}
+              </TableCell>
+              <TableCell>
+                <Button onClick={event => toggleFindable(playlist)} color='primary'>
+                  {playlist.latLng ? <icons.Visibility/>: <icons.VisibilityOff/>}
+                </Button>
               </TableCell>
               <TableCell>
                 <a href={playlist.url} target='_blank' rel="noopener noreferrer"><icons.OpenInNew/></a>
@@ -172,13 +190,20 @@ function FindPlaylists(){
   let [playlists, setPlaylists] = useState(null)
 
   useEffect(() => {
-    navigator.geolocation.getCurrentPosition(async pos => {
-      let latLng = [pos.coords.latitude, pos.coords.longitude]
-      let playlists = await model.findPlaylists(latLng)
-      setPlaylists(playlists)
-    })
+    async function find(){
+      try {
+        let latLng = await getLatLng()
+        let playlists = await model.findPlaylists(latLng)
+        setPlaylists(playlists)
+      } catch (error) {
+        setPlaylists(error.message)
+      }
+    }
+    find()
   }, [])
 
+  if (typeof playlists === 'string')
+    return <Message>{playlists}</Message>
   if (!playlists)
     return <Spinner/>
   if (playlists.length === 0)
@@ -227,3 +252,15 @@ function ShareButton({title, text, path}){
 // TODO why is it so hard to center something?
 let Spinner = ()           => <Box display='flex' justifyContent='center'><CircularProgress color='secondary'/></Box>
 let Message = ({children}) => <Box display='flex' justifyContent='center' m='1'>{children}</Box>
+
+function getLatLng(){
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(
+      async pos => resolve([pos.coords.latitude, pos.coords.longitude]),
+      error => reject(error),
+      {
+        enableHighAccuracy: true
+      }
+    )
+  })
+}

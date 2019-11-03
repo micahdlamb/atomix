@@ -187,7 +187,7 @@ async def find_playlists():
     playlists = host_playlists.values()
     latLng = to_floats(request.args.get('latLng'))
     if latLng:
-        radius = request.args.get('radius', 100)
+        radius = float(request.args.get('radius', 100))
         from geopy.distance import distance
         def close(playlist):
             return playlist.latLng and distance(latLng, playlist.latLng).m < radius
