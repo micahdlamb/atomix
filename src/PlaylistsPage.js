@@ -1,8 +1,9 @@
 import React, {useState, useEffect} from "react";
 import { Link } from "react-router-dom";
 import * as model from 'model'
+import {Spinner, Message, getLatLng} from './common'
 // @material-ui/core components
-import { Box, CircularProgress } from '@material-ui/core';
+import { Box } from '@material-ui/core';
 import { makeStyles } from "@material-ui/core/styles";
 import InputAdornment from "@material-ui/core/InputAdornment";
 import { useSnackbar } from 'notistack';
@@ -45,11 +46,6 @@ export default function PlaylistsPage() {
           tabName: "Joined",
           tabIcon: icons.DeviceHub,
           tabContent: <JoinedPlaylists/>
-        },
-        {
-          tabName: "Nearby",
-          tabIcon: icons.Search,
-          tabContent: <NearbyPlaylists/>
         }
       ]}
     />
@@ -217,52 +213,6 @@ function JoinedPlaylists(){
   </>
 }
 
-function NearbyPlaylists(){
-  const classes = useStyles();
-
-  let [playlists, setPlaylists] = useState(null)
-
-  useEffect(() => {
-    async function find(){
-      try {
-        let latLng = await getLatLng()
-        let playlists = await model.findPlaylists(latLng)
-        setPlaylists(playlists)
-      } catch (error) {
-        setPlaylists(error.message)
-      }
-    }
-    find()
-  }, [])
-
-  if (typeof playlists === 'string')
-    return <Message>{playlists}</Message>
-  if (!playlists)
-    return <Spinner/>
-  if (playlists.length === 0)
-    return <Message>No playlists found</Message>
-
-  return <>
-    <Table className={classes.table}>
-      <TableBody>
-        {playlists.map(playlist =>
-          <TableRow key={playlist.id}>
-            <TableCell>
-              {playlist.name}
-            </TableCell>
-            <TableCell>
-              <Button href={playlist.url} target='_blank' rel="noopener noreferrer" color='info' round justIcon><icons.OpenInNew/></Button>
-            </TableCell>
-            <TableCell>
-              <Button component={Link} to={`/join/${playlist.id}`} color='success' round justIcon><icons.ArrowForward/></Button>
-            </TableCell>
-          </TableRow>
-        )}
-      </TableBody>
-    </Table>
-  </>
-}
-
 let sharePlaylistButton = playlist =>
   <ShareButton
     title={`Join the ${playlist.name} Playlist! `}
@@ -280,20 +230,4 @@ function ShareButton({title, text, path}){
 
   // Clicking this should show a copy link popup
   return <Button component={Link} to={path} color='success' round justIcon><icons.Share/></Button>
-}
-
-// TODO why is it so hard to center something?
-let Spinner = ()           => <Box display='flex' justifyContent='center'><CircularProgress color='secondary'/></Box>
-let Message = ({children}) => <Box display='flex' justifyContent='center' m='1'>{children}</Box>
-
-function getLatLng(){
-  return new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(
-      async pos => resolve([pos.coords.latitude, pos.coords.longitude]),
-      error => reject(error),
-      {
-        enableHighAccuracy: true
-      }
-    )
-  })
 }

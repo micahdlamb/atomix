@@ -38,6 +38,15 @@ export function leavePlaylist(playlist_id){
 }
 
 
+export function findMatchedUsers(){
+    return get('/find_matched_users')
+}
+
+export function createPlaylistWithUser(user_id){
+    return get(`/create_playlist_with_user/${user_id}`)
+}
+
+
 function get(url){
     return fetchJson('GET', url)
 }

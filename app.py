@@ -86,7 +86,7 @@ class HostPlaylist(spotify.models.Playlist):
 
     @classmethod
     async def create(cls, owner, name, latLng=None):
-        full_name = f"Intersection - {name}"
+        full_name = f"Atomix - {name}"
         # Reusing same playlist is convenient for development
         playlists = await owner.get_all_playlists()
         self = next((p for p in playlists if p.name == full_name), None)
@@ -122,13 +122,13 @@ class HostPlaylist(spotify.models.Playlist):
 
     def to_dict(self):
         return dict(
-            id       = self.id,
-            owner    = self.owner.display_name,
-            name     = self.name,
-            latLng   = self.latLng,
-            users    = [user.display_name for user in self.users],
-            url      = self.url,
-            tracks   = [track.name for track in self._tracks]
+            id     = self.id,
+            owner  = user_to_dict(self.owner),
+            name   = self.name,
+            latLng = self.latLng,
+            users  = [user.display_name for user in self.users],
+            url    = self.url,
+            tracks = [track_to_dict(track) for track in self._tracks]
         )
 
 host_playlists : Dict[str, HostPlaylist] = {}
@@ -211,6 +211,7 @@ async def join_playlist(playlist_id):
     else:
         tracks = await user.library.get_all_tracks()
 
+    user.tracks = set(tracks)
     await playlist.add_tracks(user, tracks)
     if user != playlist.owner:
         await user.follow_playlist(playlist)
@@ -224,6 +225,42 @@ def leave_playlist(playlist_id):
     host_playlist.remove_tracks(user)
 
 
+@app.route("/find_matched_users")
+@require_user
+async def find_matched_users():
+    user = get_user()
+    user.tracks = getattr(user, 'tracks', None) or set(await user.library.get_all_tracks())
+
+    matches = []
+    for other in users.values():
+        if other == user: continue
+        other.tracks = getattr(other, 'tracks', None) or set(await other.get_all_tracks())
+        common = user.tracks & other.tracks
+        if not common: continue
+        total_tracks = len(user.tracks) + len(other.tracks) - len(common)
+        matches.append({
+            'user': user_to_dict(other),
+            'score': sum((101 - track.popularity)**.25 for track in common) / total_tracks**.5,
+            'tracks': [track_to_dict(track) for track in sorted(common, key=lambda track: track.popularity)]
+        })
+    matches.sort(key=lambda m: m['score'], reverse=True)
+    return jsonify(matches)
+
+
+@app.route("/create_playlist_with_user/<user_id>")
+@require_user
+async def create_playlist_with_user(user_id):
+    user = get_user()
+    other = users[user_id]
+    user.tracks = getattr(user, 'tracks', None) or set(await user.library.get_all_tracks())
+    other.tracks = getattr(other, 'tracks', None) or set(await other.get_all_tracks())
+    common = user.tracks & other.tracks
+    tracks = list(sorted(common, key=lambda track: track.popularity))
+    playlist = await user.create_playlist(f"Atomix - {other.display_name}")
+    await playlist.add_tracks(tracks)
+    return playlist.url
+
+
 @app.route('/reset')
 def reset():
     global users, host_playlists
@@ -233,7 +270,8 @@ def reset():
 
 
 to_floats = lambda val: val and [float(v) for v in val.split(",")]
-
+user_to_dict = lambda u: dict(id=u.id, display_name=u.display_name, image=u.images[0].url)
+track_to_dict = lambda t: dict(id=t.id, name=t.name, popularity=t.popularity)
 
 # Serve React App #################################################################################
 

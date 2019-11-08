@@ -15,7 +15,7 @@ const styles = {
     ...container,
     zIndex: "2",
     position: "relative",
-    paddingTop: "20vh",
+    paddingTop: "115px",
     color: "#FFFFFF",
     paddingBottom: "200px"
   },
@@ -73,11 +73,11 @@ export default function DefaultLayout({tabs, headerColor="primary", ...rest}) {
       <Header
         color="transparent"
         routes={dashboardRoutes}
-        brand="Spotify Intersection App"
+        brand="Atomix"
         rightLinks={<HeaderLinks />}
         fixed
         changeColorOnScroll={{
-          height: 400,
+          height: 50,
           color: "white"
         }}
         {...rest}
@@ -93,7 +93,7 @@ export default function DefaultLayout({tabs, headerColor="primary", ...rest}) {
         <div className={classes.container}>
           <GridContainer justify="center">
             {/* TODO Grid breakpoints don't match page breakpoints which causes jumpiness when resizing */}
-            <GridItem lg={8}>
+            <GridItem>
               <CustomTabs
                 className={classes[cardAnimaton]}
                 headerColor={headerColor}
