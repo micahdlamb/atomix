@@ -66,7 +66,7 @@ export default function DefaultLayout({tabs, headerColor="primary", ...rest}) {
   const [cardAnimaton, setCardAnimation] = React.useState("cardHidden");
   setTimeout(function() {
     setCardAnimation("");
-  }, 700);
+  }, 0);
 
   return (
     <div {...rest}>

@@ -1,12 +1,13 @@
 /*eslint-disable*/
-import React from "react";
+import React, {Suspense} from "react";
 // import DeleteIcon from "@material-ui/icons/Delete";
 // import IconButton from "@material-ui/core/IconButton";
 // react components for routing our app without refresh
 import { Link } from "react-router-dom";
-
+import * as model from 'model'
 // @material-ui/core components
 import { makeStyles } from "@material-ui/core/styles";
+import { CircularProgress } from '@material-ui/core';
 import List from "@material-ui/core/List";
 import ListItem from "@material-ui/core/ListItem";
 // import Tooltip from "@material-ui/core/Tooltip";
@@ -27,24 +28,9 @@ export default function HeaderLinks(props) {
   const classes = useStyles();
   return (
     <List className={classes.list}>
-      <ListItem className={classes.listItem}>
-        <Link
-          to="/playlists"
-          color="transparent"
-          className={classes.navLink}
-        >
-          <icons.MusicNote className={classes.icons} /> Playlists
-        </Link>
-      </ListItem>
-      <ListItem className={classes.listItem}>
-        <Link
-          to="/find"
-          color="transparent"
-          className={classes.navLink}
-        >
-          <icons.Search className={classes.icons} /> Find
-        </Link>
-      </ListItem>
+      <Suspense fallback={<CircularProgress/>}>
+        <Links/>
+      </Suspense>
       {/* <ListItem className={classes.listItem}>
         <CustomDropdown
           noLiPadding
@@ -131,4 +117,50 @@ export default function HeaderLinks(props) {
       </ListItem> */}
     </List>
   );
+}
+
+let user
+let userPromise
+function getUser(){
+  if (user !== undefined) return user
+  userPromise = userPromise || model.getUser()
+  userPromise.then(result => user = result)
+  throw userPromise
+}
+
+function Links(){
+  const classes = useStyles();
+
+  let user = getUser()
+
+  return user ? <>
+    <ListItem className={classes.listItem}>
+      <Link
+        to="/playlists"
+        color="transparent"
+        className={classes.navLink}
+      >
+        <icons.MusicNote className={classes.icons} /> Playlists
+      </Link>
+    </ListItem>
+    <ListItem className={classes.listItem}>
+      <Link
+        to="/find"
+        color="transparent"
+        className={classes.navLink}
+      >
+        <icons.Search className={classes.icons} /> Find
+      </Link>
+    </ListItem>
+  </> : <>
+    <ListItem className={classes.listItem}>
+      <a
+        href="/playlists"
+        color="transparent"
+        className={classes.navLink}
+      >
+        <icons.MusicNote className={classes.icons} /> Login
+      </a>
+    </ListItem>
+  </>
 }

@@ -216,7 +216,7 @@ function JoinedPlaylists(){
 let sharePlaylistButton = playlist =>
   <ShareButton
     title={`Join the ${playlist.name} Playlist! `}
-    text={`${playlist.owner} wants your musical input.`}
+    text={`${playlist.owner.display_name} wants your musical input.`}
     path={`/join/${playlist.id}`}
   />
 

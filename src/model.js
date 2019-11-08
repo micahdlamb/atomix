@@ -1,3 +1,8 @@
+export function getUser(){
+    return get('/get_user')
+}
+
+
 export function createPlaylist(name, latLng=undefined){
     return post(`/create_playlist/${name}`, {latLng})
 }

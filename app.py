@@ -81,6 +81,11 @@ users = {}
 def get_user() -> User:
     return users.get(session.get('user_id'))
 
+@app.route('/get_user')
+def _get_user():
+    user = get_user()
+    return jsonify(user and user_to_dict(user))
+
 
 class HostPlaylist(spotify.models.Playlist):
 
@@ -144,7 +149,7 @@ async def create_playlist(name):
     return playlist.to_dict()
 
 @app.route('/get_playlist/<playlist_id>')
-async def get_playlist(playlist_id):
+def get_playlist(playlist_id):
     playlist = host_playlists[playlist_id]
     return playlist.to_dict()
 
@@ -160,7 +165,7 @@ async def update_playlist(playlist_id):
 
 @app.route('/delete_playlist/<playlist_id>', methods=['DELETE'])
 @require_user
-async def delete_playlist(playlist_id):
+def delete_playlist(playlist_id):
     user = get_user()
     playlist = host_playlists[playlist_id]
     if (user != playlist.owner): abort(403)
@@ -183,7 +188,7 @@ def get_joined_playlists():
     return jsonify([playlist.to_dict() for playlist in reversed(playlists)])
 
 @app.route('/find_playlists')
-async def find_playlists():
+def find_playlists():
     playlists = host_playlists.values()
     latLng = to_floats(request.args.get('latLng'))
     if latLng:
@@ -219,10 +224,10 @@ async def join_playlist(playlist_id):
 
 @app.route("/leave_playlist/<playlist_id>", methods=['POST'])
 @require_user
-def leave_playlist(playlist_id):
+async def leave_playlist(playlist_id):
     user = get_user()
     host_playlist = host_playlists[playlist_id]
-    host_playlist.remove_tracks(user)
+    await host_playlist.remove_tracks(user)
 
 
 @app.route("/find_matched_users")
@@ -234,7 +239,7 @@ async def find_matched_users():
     matches = []
     for other in users.values():
         if other == user: continue
-        other.tracks = getattr(other, 'tracks', None) or set(await other.get_all_tracks())
+        other.tracks = getattr(other, 'tracks', None) or set(await other.library.get_all_tracks())
         common = user.tracks & other.tracks
         if not common: continue
         total_tracks = len(user.tracks) + len(other.tracks) - len(common)
@@ -275,15 +280,20 @@ track_to_dict = lambda t: dict(id=t.id, name=t.name, popularity=t.popularity)
 
 # Serve React App #################################################################################
 
+@app.route('/playlists')
+@app.route('/find')
+@app.route('/join/<playlist_id>')
+@require_user
+def serve_protected(**_):
+    return send_from_directory(app.static_folder, 'index.html')
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
-@require_user
 def serve(path):
     if path and (Path(app.static_folder) / path).exists():
         return send_from_directory(app.static_folder, path)
     else:
         return send_from_directory(app.static_folder, 'index.html')
-
 
 # Run #############################################################################################
 
