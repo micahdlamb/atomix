@@ -297,7 +297,7 @@ track_to_dict = lambda t: dict(id=t.id, name=t.name, popularity=t.popularity)
 @app.route('/join/<playlist_id>')
 @require_user
 def serve_protected(**_):
-    return send_from_directory(app.static_folder, 'index.html')
+    return send_from_directory(app.static_folder, 'index.html', cache_timeout=0)
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
