@@ -1,7 +1,6 @@
 {
-  "name": "intersection",
-  "description": "Frontend React App",
-  "main": "dist/index.js",
+  "name": "atomix",
+  "description": "Find common music",
   "dependencies": {
     "@material-ui/core": "4.3.2",
     "@material-ui/icons": "4.2.1",
