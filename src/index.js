@@ -27,13 +27,18 @@ ReactDOM.render(
         <Route exact path="/" component={LandingPage} />
         <Route path="/playlists" component={PlaylistsPage} />
         <Route path="/find" component={FindPage}/>
-        <Route path="/join/:playlist_id" component={JoinPage}/>
+        <Route path="/join/:playlist_id" component={JoinPage} />
 
         <Route path="/profile-page" component={ProfilePage} />
         <Route path="/login-page" component={LoginPage} />
         <Route path="/components" component={Components} />
+        <Route component={NotFound} />
       </Switch>
     </Router>
   </SnackbarProvider>,
   document.getElementById("root")
 );
+
+function NotFound(){
+  return <h1>Page not found</h1>
+}
