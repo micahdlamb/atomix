@@ -15,30 +15,42 @@ app.secret_key = 'sup3rsp1cy'
 
 # OAuth ###########################################################################################
 
+# playlist-read-collaborative
+# playlist-modify-private
+# playlist-modify-public
+# playlist-read-private
+#
+# user-modify-playback-state
+# user-read-currently-playing
+# user-read-playback-state
+#
+# user-read-private
+# user-read-email
+#
+# user-library-modify
+# user-library-read
+#
+# user-follow-modify
+# user-follow-read
+#
+# user-read-recently-played
+# user-top-read
+#
+# streaming
+# app-remote-control
+
 scopes = """
 playlist-read-collaborative
 playlist-modify-private
 playlist-modify-public
 playlist-read-private
 
-user-modify-playback-state
-user-read-currently-playing
-user-read-playback-state
-
-user-read-private
 user-read-email
 
-user-library-modify
 user-library-read
 
 user-follow-modify
 user-follow-read
-
-user-read-recently-played
-user-top-read
-
-streaming
-app-remote-control
 """.split()
 oauth2 = spotify.OAuth2(os.environ['SPOTIFY_CLIENT_ID'], os.environ['SPOTIFY_REDIRECT_URI'], scopes=scopes)
 
@@ -67,8 +79,8 @@ async def spotify_authorized():
         return "user = await User.from_code(spotify.Client(os.environ['SPOTIFY_CLIENT_ID'], os.environ['SPOTIFY_CLIENT_SECRET']), '"+code+"', redirect_uri=os.environ['SPOTIFY_REDIRECT_URI'], refresh=True)"
     client = spotify.Client(os.environ['SPOTIFY_CLIENT_ID'], os.environ['SPOTIFY_CLIENT_SECRET']) # This errors if constructed outside of route
     user = await User.from_code(client, code, redirect_uri=os.environ['SPOTIFY_REDIRECT_URI'], refresh=True)
-    users[id(user)] = user
-    session['user_id'] = id(user)
+    users[user.id] = user
+    session['user_id'] = user.id
     return redirect(session['next'])
 
 
@@ -245,7 +257,7 @@ async def find_matched_users():
         total_tracks = len(user.tracks) + len(other.tracks) - len(common)
         matches.append({
             'user': user_to_dict(other),
-            'score': sum((101 - track.popularity)**.25 for track in common) / total_tracks**.5,
+            'score': sum((101 - track.popularity)**.25 for track in common) / total_tracks**.25,
             'tracks': [track_to_dict(track) for track in sorted(common, key=lambda track: track.popularity)]
         })
     matches.sort(key=lambda m: m['score'], reverse=True)
@@ -294,6 +306,8 @@ def serve(path):
         return send_from_directory(app.static_folder, path)
     else:
         return send_from_directory(app.static_folder, 'index.html')
+
+# Persist #########################################################################################
 
 # Run #############################################################################################
 
