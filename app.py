@@ -270,7 +270,7 @@ async def create_playlist_with_user(user_id):
     user = get_user()
     other = users[user_id]
     user.tracks = getattr(user, 'tracks', None) or set(await user.library.get_all_tracks())
-    other.tracks = getattr(other, 'tracks', None) or set(await other.get_all_tracks())
+    other.tracks = getattr(other, 'tracks', None) or set(await other.library.get_all_tracks())
     common = user.tracks & other.tracks
     tracks = list(sorted(common, key=lambda track: track.popularity))
     playlist = await user.create_playlist(f"Atomix - {other.display_name}")
