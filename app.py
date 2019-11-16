@@ -1,5 +1,5 @@
-import os, functools, collections, asyncio
-from typing import Dict, Tuple
+import os, functools, collections
+from typing import Dict
 from quart import Quart, jsonify, url_for, request, send_from_directory, redirect, session, abort
 import spotify
 from spotify.models import User
@@ -271,7 +271,7 @@ async def find_matched_users():
         total_tracks = len(user.tracks) + len(other.tracks) - len(common)
         matches.append({
             'user': user_to_dict(other),
-            'score': sum((101 - track.popularity)**.25 for track in common) / total_tracks**.25,
+            'score': 100 * sum((101 - track.popularity)**.25 for track in common) / total_tracks**.25,
             'tracks': [track_to_dict(track) for track in sorted(common, key=lambda track: track.popularity)]
         })
     matches.sort(key=lambda m: m['score'], reverse=True)
