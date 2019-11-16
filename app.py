@@ -13,7 +13,7 @@ app.secret_key = 'sup3rsp1cy'
 # from quart_cors import cors
 # app = cors(app, allow_origin="*")
 
-# OAuth ###########################################################################################
+# OAuth ################################################################################################################
 
 # playlist-read-collaborative
 # playlist-modify-private
@@ -75,19 +75,27 @@ async def spotify_authorized():
     except KeyError:
         return f"Failed to authenticate with Spotify: {request.args['error']}"
 
-    if session['next'] == '/python_console':
+    next = session.get('next', '/')
+    if next == '/python_console':
         return "user = await User.from_code(spotify.Client(os.environ['SPOTIFY_CLIENT_ID'], os.environ['SPOTIFY_CLIENT_SECRET']), '"+code+"', redirect_uri=os.environ['SPOTIFY_REDIRECT_URI'], refresh=True)"
     client = spotify.Client(os.environ['SPOTIFY_CLIENT_ID'], os.environ['SPOTIFY_CLIENT_SECRET']) # This errors if constructed outside of route
     user = await User.from_code(client, code, redirect_uri=os.environ['SPOTIFY_REDIRECT_URI'], refresh=True)
     users[user.id] = user
     session['user_id'] = user.id
-    return redirect(session['next'])
+    return redirect(next)
 
 
 @app.route("/python_console")
 @require_user
 def python_console():
     return "logout and try again..."
+
+
+@app.route("/login_as/<user_id>")
+def login_as(user_id):
+    user = next(user for user in users.values() if user.id == user_id)
+    session['user_id'] = user.id
+    return user_to_dict(user)
 
 
 # API ##################################################################################################################
@@ -279,9 +287,13 @@ async def create_playlist_with_user(user_id):
     other.tracks = getattr(other, 'tracks', None) or set(await other.library.get_all_tracks())
     common = user.tracks & other.tracks
     tracks = list(sorted(common, key=lambda track: track.popularity))
-    playlist = await user.create_playlist(f"Atomix - {other.display_name}")
-    await playlist.add_tracks(tracks)
-    return playlist.url
+    name = f"Atomix - {other.display_name}"
+    playlists = await user.get_all_playlists()
+    playlist = next((p for p in playlists if p.name == name), None)
+    if playlist is None:  # Empty playlist is considered False!!!
+        playlist = await user.create_playlist(name)
+    await playlist.add_tracks(*tracks)
+    return jsonify(playlist.url)
 
 
 @app.route('/reset')

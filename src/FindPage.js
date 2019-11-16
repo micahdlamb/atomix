@@ -67,7 +67,7 @@ function MatchedUsers(){
   return (
     <Grid>
       <Grid item lg={4} md={4} sm={6} xs={12}>
-        {matches.map(match => <MatchCard match={match}/>)}
+        {matches.map(match => <MatchCard key={match.user.id} match={match}/>)}
       </Grid>
     </Grid>
   )
