@@ -1,4 +1,4 @@
-import os, functools, collections
+import os, functools, collections, asyncio
 from typing import Dict, Tuple
 from quart import Quart, jsonify, url_for, request, send_from_directory, redirect, session, abort
 import spotify
@@ -84,7 +84,13 @@ async def spotify_authorized():
     return redirect(session['next'])
 
 
-# Main ############################################################################################
+@app.route("/python_console")
+@require_user
+def python_console():
+    return "logout and try again..."
+
+
+###################################################################################################
 
 # TODO users are sitting in here forever refreshing their tokens
 # Need to update spotify.py to refresh token when a request fails due to expired token
@@ -308,6 +314,31 @@ def serve(path):
         return send_from_directory(app.static_folder, 'index.html')
 
 # Persist #########################################################################################
+
+refresh_tokens_file = root / 'refresh_tokens.txt'
+refresh_tokens_file.touch()
+
+@app.route('/save_users') # TODO can't get signal handlers to work...
+def save_users():
+    with open(refresh_tokens_file, 'w') as f:
+        f.write('\n'.join(user.refresh_token for user in users.values()))
+
+    return f"{len(users)} users saved"
+
+
+async def restore_users():
+    with open(refresh_tokens_file) as f:
+        refresh_tokens = f.read().split()
+
+    for token in refresh_tokens:
+        client = spotify.Client(os.environ['SPOTIFY_CLIENT_ID'], os.environ['SPOTIFY_CLIENT_SECRET'])
+        user = await User.from_refresh_token(client, token, refresh=True)
+        users[user.id] = user
+
+    print(f"{len(users)} users restored")
+
+future = asyncio.ensure_future(restore_users())
+asyncio.get_event_loop().run_until_complete(future)
 
 # Run #############################################################################################
 
