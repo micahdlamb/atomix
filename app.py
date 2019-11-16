@@ -20,24 +20,12 @@ app.secret_key = 'sup3rsp1cy'
 # playlist-modify-public
 # playlist-read-private
 #
-# user-modify-playback-state
-# user-read-currently-playing
-# user-read-playback-state
-#
-# user-read-private
 # user-read-email
 #
-# user-library-modify
 # user-library-read
 #
 # user-follow-modify
 # user-follow-read
-#
-# user-read-recently-played
-# user-top-read
-#
-# streaming
-# app-remote-control
 
 scopes = """
 playlist-read-collaborative
@@ -45,12 +33,24 @@ playlist-modify-private
 playlist-modify-public
 playlist-read-private
 
+user-modify-playback-state
+user-read-currently-playing
+user-read-playback-state
+
+user-read-private
 user-read-email
 
+user-library-modify
 user-library-read
 
 user-follow-modify
 user-follow-read
+
+user-read-recently-played
+user-top-read
+
+streaming
+app-remote-control
 """.split()
 oauth2 = spotify.OAuth2(os.environ['SPOTIFY_CLIENT_ID'], os.environ['SPOTIFY_REDIRECT_URI'], scopes=scopes)
 
@@ -90,7 +90,7 @@ def python_console():
     return "logout and try again..."
 
 
-###################################################################################################
+# API ##################################################################################################################
 
 # TODO users are sitting in here forever refreshing their tokens
 # Need to update spotify.py to refresh token when a request fails due to expired token
@@ -296,7 +296,8 @@ to_floats = lambda val: val and [float(v) for v in val.split(",")]
 user_to_dict = lambda u: dict(id=u.id, display_name=u.display_name, image=u.images[0].url)
 track_to_dict = lambda t: dict(id=t.id, name=t.name, popularity=t.popularity)
 
-# Serve React App #################################################################################
+
+# Serve React App ######################################################################################################
 
 @app.route('/playlists')
 @app.route('/find')
@@ -313,18 +314,17 @@ def serve(path):
     else:
         return send_from_directory(app.static_folder, 'index.html')
 
-# Persist #########################################################################################
+
+# Persist ##############################################################################################################
 
 refresh_tokens_file = root / 'refresh_tokens.txt'
 refresh_tokens_file.touch()
 
-@app.route('/save_users') # TODO can't get signal handlers to work...
 def save_users():
     with open(refresh_tokens_file, 'w') as f:
         f.write('\n'.join(user.refresh_token for user in users.values()))
 
-    return f"{len(users)} users saved"
-
+    print(f"{len(users)} users saved")
 
 async def restore_users():
     with open(refresh_tokens_file) as f:
@@ -337,10 +337,19 @@ async def restore_users():
 
     print(f"{len(users)} users restored")
 
-future = asyncio.ensure_future(restore_users())
-asyncio.get_event_loop().run_until_complete(future)
+import asyncio
+policy = asyncio.get_event_loop_policy()
+_set_event_loop = policy.set_event_loop
+def set_event_loop(loop):
+    _set_event_loop(loop)
+    if loop:
+        loop.run_until_complete(restore_users())
+    else:
+        save_users()
+policy.set_event_loop = set_event_loop
 
-# Run #############################################################################################
+
+# Run ##################################################################################################################
 
 if 'HOST' in os.environ:
     from hypercorn.middleware import HTTPToHTTPSRedirectMiddleware
