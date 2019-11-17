@@ -117,13 +117,8 @@ class HostPlaylist(spotify.models.Playlist):
 
     @classmethod
     async def create(cls, owner, name, latLng=None):
-        full_name = f"Atomix - {name}"
         # Reusing same playlist is convenient for development
-        playlists = await owner.get_all_playlists()
-        self = next((p for p in playlists if p.name == full_name), None)
-        if self is None: # Empty playlist is considered False!!!
-            self = await owner.create_playlist(full_name)
-
+        self = await get_create_playlist(owner, f"Atomix - {name}")
         self.__class__ = cls
         self.owner = owner
         self.name  = name
@@ -287,11 +282,7 @@ async def create_playlist_with_user(user_id):
     other.tracks = getattr(other, 'tracks', None) or set(await other.library.get_all_tracks())
     common = user.tracks & other.tracks
     tracks = list(sorted(common, key=lambda track: track.popularity))
-    name = f"Atomix - {other.display_name}"
-    playlists = await user.get_all_playlists()
-    playlist = next((p for p in playlists if p.name == name), None)
-    if playlist is None:  # Empty playlist is considered False!!!
-        playlist = await user.create_playlist(name)
+    playlist = await get_create_playlist(user, f"Atomix - {other.display_name}")
     await playlist.add_tracks(*tracks)
     return jsonify(playlist.url)
 
@@ -307,6 +298,13 @@ def reset():
 to_floats = lambda val: val and [float(v) for v in val.split(",")]
 user_to_dict = lambda u: dict(id=u.id, display_name=u.display_name, image=u.images[0].url)
 track_to_dict = lambda t: dict(id=t.id, name=t.name, popularity=t.popularity)
+
+
+async def get_create_playlist(user, name):
+    playlists = await user.get_all_playlists()
+    playlist = next((p for p in playlists if p.name == name), None)
+    # Empty playlist is considered False!!!
+    return await user.create_playlist(name) if playlist is None else playlist
 
 
 # Serve React App ######################################################################################################

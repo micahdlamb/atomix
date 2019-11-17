@@ -65,10 +65,12 @@ function MatchedUsers(){
     return <Message>No Matches found</Message>
 
   return (
-    <Grid>
-      <Grid item lg={4} md={4} sm={6} xs={12}>
-        {matches.map(match => <MatchCard key={match.user.id} match={match}/>)}
-      </Grid>
+    <Grid container spacing={2}>
+      {matches.map(match =>
+        <Grid item lg={4} md={4} sm={6} xs={12} key={match.user.id}>
+          <MatchCard  match={match}/>
+        </Grid>
+      )}
     </Grid>
   )
 }

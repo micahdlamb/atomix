@@ -55,9 +55,9 @@ export default function MatchCard({match}) {
                     <span>{match.user.display_name}</span>
                     <span className={classes.score}>{Math.round(match.score)}</span>
                 </Typography>
-                <Typography variant="body2" color="textSecondary" component="p" className={classes.tracks}>
+                <Typography variant="body2" color="textSecondary" component="div" className={classes.tracks}>
                     {match.tracks.slice(0, 5).map(track =>
-                        <span>{track.name}</span>
+                        <span key={track.id}>{track.name}</span>
                     )}
                     {match.tracks.length > 10 && ' ...'}
                     <div className={classes.totalTracks}>{match.tracks.length} common tracks</div>
