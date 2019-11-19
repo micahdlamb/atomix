@@ -7,6 +7,7 @@ import CardContent from '@material-ui/core/CardContent';
 import CardMedia from '@material-ui/core/CardMedia';
 import Button from '@material-ui/core/Button';
 import Typography from '@material-ui/core/Typography';
+import { useSnackbar } from 'notistack';
 
 const useStyles = makeStyles({
   card: {
@@ -37,10 +38,19 @@ const useStyles = makeStyles({
 
 export default function MatchCard({match}) {
     const classes = useStyles();
+    const { enqueueSnackbar } = useSnackbar();
 
     async function createPlaylistWithUser(){
         let url = await model.createPlaylistWithUser(match.user.id)
         window.location = url
+    }
+
+    async function troll(){
+        let track_uri = prompt("Enter track URI")
+        if (!track_uri) return
+        let result = await model.play_track(match.user.id, track_uri)
+        let variant = result === 'success' ? result : 'error'
+        enqueueSnackbar(result, {variant})
     }
 
     return (
@@ -66,6 +76,9 @@ export default function MatchCard({match}) {
             <CardActions>
                 <Button size="small" color="primary" onClick={createPlaylistWithUser}>
                     Open Playlist
+                </Button>
+                <Button size="small" color="secondary" onClick={troll}>
+                    Troll
                 </Button>
             </CardActions>
         </Card>

@@ -93,6 +93,8 @@ def python_console():
 
 @app.route("/login_as/<user_id>")
 def login_as(user_id):
+    micah_id, harsh_id = "1224049687", "12150784354"
+    assert session['user_id'] in (micah_id, harsh_id)
     user = next(user for user in users.values() if user.id == user_id)
     session['user_id'] = user.id
     return user_to_dict(user)
@@ -238,7 +240,7 @@ async def join_playlist(playlist_id):
         tracks = await user.library.get_all_tracks()
 
     user.tracks = set(tracks)
-    await playlist.add_tracks(user, tracks)
+    await playlist.replace_tracks(user, tracks)
     if user != playlist.owner:
         await user.follow_playlist(playlist)
     return playlist.to_dict()
@@ -287,12 +289,15 @@ async def create_playlist_with_user(user_id):
     return jsonify(playlist.url)
 
 
-@app.route('/reset')
-def reset():
-    global users, host_playlists
-    users = {}
-    host_playlists = {}
-    return jsonify("great success")
+@app.route('/play_track/<user_id>/<track_uri>', methods=['PUT'])
+async def play_track(user_id, track_uri):
+    user = users[user_id]
+    devices = await user.get_devices()
+    phone = next((d for d in devices if d.type == 'Smartphone'), None)
+    if not phone: return jsonify("Smartphone not connected")
+    player = await user.get_player()
+    await player.play(track_uri, device=phone)
+    return jsonify("success")
 
 
 to_floats = lambda val: val and [float(v) for v in val.split(",")]
