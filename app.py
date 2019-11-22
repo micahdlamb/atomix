@@ -301,7 +301,7 @@ async def play_track(user_id, track_uri):
 
 
 to_floats = lambda val: val and [float(v) for v in val.split(",")]
-user_to_dict = lambda u: dict(id=u.id, display_name=u.display_name, image=u.images[0].url)
+user_to_dict = lambda u: dict(id=u.id, display_name=u.display_name, image=u.images[0].url if u.images else None)
 track_to_dict = lambda t: dict(id=t.id, name=t.name, popularity=t.popularity)
 
 

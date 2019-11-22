@@ -55,11 +55,13 @@ export default function MatchCard({match}) {
 
     return (
         <Card className={classes.card}>
-            <CardMedia
-                component={'img'}
-                className={classes.media}
-                image={match.user.image}
-            />
+            {match.user.image &&
+                <CardMedia
+                    component={'img'}
+                    className={classes.media}
+                    image={match.user.image}
+                />
+            }
             <CardContent>
                 <Typography gutterBottom variant="h5" component="h2" className={classes.h}>
                     <span>{match.user.display_name}</span>
