@@ -337,7 +337,7 @@ refresh_tokens_file.touch()
 
 def save_users():
     with open(refresh_tokens_file, 'w') as f:
-        f.write('\n'.join(user.refresh_token for user in users.values()))
+        f.write('\n'.join(user.http.refresh_token for user in users.values()))
 
     print(f"{len(users)} users saved")
 
