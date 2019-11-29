@@ -77,9 +77,9 @@ async def spotify_authorized():
 
     next = session.get('next', '/')
     if next == '/python_console':
-        return "user = await User.from_code(spotify.Client(os.environ['SPOTIFY_CLIENT_ID'], os.environ['SPOTIFY_CLIENT_SECRET']), '"+code+"', redirect_uri=os.environ['SPOTIFY_REDIRECT_URI'], refresh=True)"
+        return "user = await User.from_code(spotify.Client(os.environ['SPOTIFY_CLIENT_ID'], os.environ['SPOTIFY_CLIENT_SECRET']), '"+code+"', redirect_uri=os.environ['SPOTIFY_REDIRECT_URI'])"
     client = spotify.Client(os.environ['SPOTIFY_CLIENT_ID'], os.environ['SPOTIFY_CLIENT_SECRET']) # This errors if constructed outside of route
-    user = await User.from_code(client, code, redirect_uri=os.environ['SPOTIFY_REDIRECT_URI'], refresh=True)
+    user = await User.from_code(client, code, redirect_uri=os.environ['SPOTIFY_REDIRECT_URI'])
     users[user.id] = user
     session['user_id'] = user.id
     return redirect(next)
@@ -347,7 +347,7 @@ async def restore_users():
 
     for token in refresh_tokens:
         client = spotify.Client(os.environ['SPOTIFY_CLIENT_ID'], os.environ['SPOTIFY_CLIENT_SECRET'])
-        user = await User.from_refresh_token(client, token, refresh=True)
+        user = await User.from_refresh_token(client, token)
         users[user.id] = user
 
     print(f"{len(users)} users restored")
