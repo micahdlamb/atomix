@@ -130,11 +130,11 @@ class HostPlaylist(spotify.models.Playlist):
         self.join_url = url_for('join_playlist', _external=True, playlist_id=self.id)
         return self
 
-    async def add_tracks(self, user, tracks):
+    async def join(self, user, tracks):
         self.users[user] = tracks
         await self._update_tracks()
 
-    async def remove_tracks(self, user):
+    async def leave(self, user):
         del self.users[user]
         await self._update_tracks()
 
@@ -240,7 +240,7 @@ async def join_playlist(playlist_id):
         tracks = await user.library.get_all_tracks()
 
     user.tracks = set(tracks)
-    await playlist.replace_tracks(user, tracks)
+    await playlist.join(user, tracks)
     if user != playlist.owner:
         await user.follow_playlist(playlist)
     return playlist.to_dict()
@@ -249,8 +249,8 @@ async def join_playlist(playlist_id):
 @require_user
 async def leave_playlist(playlist_id):
     user = get_user()
-    host_playlist = host_playlists[playlist_id]
-    await host_playlist.remove_tracks(user)
+    playlist = host_playlists[playlist_id]
+    await playlist.leave(user)
 
 
 @app.route("/find_matched_users")
