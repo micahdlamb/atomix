@@ -10,14 +10,17 @@ import { container } from "assets/jss/material-kit-react.js";
 import image from "assets/img/bg7.jpg";
 import CustomTabs from "components/CustomTabs/CustomTabs.js";
 
-const styles = {
+const styles = theme => ({
   container: {
     ...container,
     zIndex: "2",
     position: "relative",
     paddingTop: "115px",
     color: "#FFFFFF",
-    paddingBottom: "200px"
+    paddingBottom: "200px",
+    [theme.breakpoints.down('sm')]: {
+      paddingTop: '100px'
+    }
   },
   cardHidden: {
     opacity: "0",
@@ -54,7 +57,7 @@ const styles = {
       width: "100%"
     }
   },
-};
+});
 
 const useStyles = makeStyles(styles);
 

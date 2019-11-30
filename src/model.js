@@ -81,5 +81,11 @@ function fetchJson(method, url, body){
             'Content-Type': 'application/json'
         },
         body: body && JSON.stringify(body)
-    }).then(resp => resp.json())
+    }).then(response => {
+        if (!response.ok)
+            throw Error(response.statusText)
+        return response.json()
+    }).catch(error => {
+        window.enqueueSnackbar(error.message, {variant: 'error'})
+    })
 }

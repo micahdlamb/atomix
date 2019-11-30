@@ -5,11 +5,11 @@ import PropTypes from "prop-types";
 // nodejs library that concatenates classes
 import classNames from "classnames";
 // material-ui core components
-import { List, ListItem } from "@material-ui/core";
+// import { List, ListItem } from "@material-ui/core";
 import { makeStyles } from "@material-ui/core/styles";
 
 // @material-ui/icons
-import Favorite from "@material-ui/icons/Favorite";
+// import Favorite from "@material-ui/icons/Favorite";
 
 import styles from "assets/jss/material-kit-react/components/footerStyle.js";
 
@@ -22,14 +22,14 @@ export default function Footer(props) {
     [classes.footer]: true,
     [classes.footerWhiteFont]: whiteFont
   });
-  const aClasses = classNames({
-    [classes.a]: true,
-    [classes.footerWhiteFont]: whiteFont
-  });
+  // const aClasses = classNames({
+  //   [classes.a]: true,
+  //   [classes.footerWhiteFont]: whiteFont
+  // });
   return (
     <footer className={footerClasses}>
       <div className={classes.container}>
-        <div className={classes.left}>
+        {/* <div className={classes.left}>
           <List className={classes.list}>
             <ListItem className={classes.inlineBlock}>
               <a
@@ -80,7 +80,7 @@ export default function Footer(props) {
             Creative Tim
           </a>{" "}
           for a better web.
-        </div>
+        </div> */}
       </div>
     </footer>
   );

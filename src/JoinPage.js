@@ -1,5 +1,5 @@
 import React, {useState, useEffect} from "react";
-import { useParams, useHistory } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import * as model from 'model'
 // @material-ui/core components
 import { Box, CircularProgress } from '@material-ui/core';
@@ -10,6 +10,7 @@ import RadioGroup from '@material-ui/core/RadioGroup';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import FormControl from '@material-ui/core/FormControl';
 import FormLabel from '@material-ui/core/FormLabel';
+import { useSnackbar } from 'notistack';
 // @material-ui/icons
 import * as icons from "@material-ui/icons";
 // core components
@@ -37,10 +38,11 @@ export default function(props) {
 function JoinPlaylist(){
 
   let {playlist_id} = useParams()
-  let history       = useHistory()
+  const { enqueueSnackbar } = useSnackbar()
 
   let [playlist, setPlaylist] = useState(null)
   let [give, setGive] = useState('likes')
+  let [joined, setJoined] = useState(false)
 
   useEffect(() => {
     async function getPlaylist(){
@@ -51,9 +53,11 @@ function JoinPlaylist(){
   }, [playlist_id])
 
   async function join(){
-    window.open(playlist.url)
-    await model.joinPlaylist(playlist_id, give)
-    history.push('/playlists')
+    setJoined('joining')
+    let playlist = await model.joinPlaylist(playlist_id, give)
+    setPlaylist(playlist)
+    setJoined(true)
+    enqueueSnackbar(`${playlist.tracks.length} songs in common!`, {variant: 'success'})
   }
 
   if (!playlist)
@@ -61,8 +65,17 @@ function JoinPlaylist(){
 
   return <>
     <GridContainer style={{textAlign: 'center'}}>
-      <GridItem sm={6}>
-        <Button onClick={join} color="rose" size="lg" round>Join {playlist.name}</Button>
+      <GridItem sm={6} style={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+        {joined === 'joining' ?
+          <Spinner/>
+        :
+          <Button round color="rose" size="lg"
+            onClick={!joined ? join : undefined}
+            href={joined ? playlist.url : undefined}
+          >
+            {joined ? 'Open' : <>Join {playlist.name}</>}
+          </Button>
+        }
       </GridItem>
       <GridItem sm={6}>
         <FormControl component="fieldset">
@@ -78,4 +91,4 @@ function JoinPlaylist(){
 }
 
 // TODO commonize code with identical components on PlaylistsPage
-let Spinner = () => <Box display='flex' justifyContent='center'><CircularProgress color='secondary'/></Box>
+let Spinner = ({color='secondary', ...props}) => <Box display='flex' justifyContent='center' {...props}><CircularProgress color={color}/></Box>
