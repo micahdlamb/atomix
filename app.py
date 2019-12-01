@@ -20,12 +20,24 @@ app.secret_key = 'sup3rsp1cy'
 # playlist-modify-public
 # playlist-read-private
 #
+# user-modify-playback-state
+# user-read-currently-playing
+# user-read-playback-state
+#
+# user-read-private
 # user-read-email
 #
+# user-library-modify
 # user-library-read
 #
 # user-follow-modify
 # user-follow-read
+#
+# user-read-recently-played
+# user-top-read
+#
+# streaming
+# app-remote-control
 
 scopes = """
 playlist-read-collaborative
@@ -37,10 +49,8 @@ user-modify-playback-state
 user-read-currently-playing
 user-read-playback-state
 
-user-read-private
 user-read-email
 
-user-library-modify
 user-library-read
 
 user-follow-modify
