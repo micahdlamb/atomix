@@ -65,7 +65,7 @@ export default function LandingPage(props) {
       <Header
         color="transparent"
         routes={[]}
-        brand="Atomix"
+        brand="Mixify"
         rightLinks={<HeaderLinks />}
         fixed
         changeColorOnScroll={{

@@ -76,7 +76,7 @@ export default function DefaultLayout({tabs, headerColor="primary", ...rest}) {
       <Header
         color="transparent"
         routes={dashboardRoutes}
-        brand="Atomix"
+        brand="Mixify"
         rightLinks={<HeaderLinks />}
         fixed
         changeColorOnScroll={{

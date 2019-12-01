@@ -130,7 +130,7 @@ class HostPlaylist(spotify.models.Playlist):
     @classmethod
     async def create(cls, owner, name, latLng=None):
         # Reusing same playlist is convenient for development
-        self = await get_create_playlist(owner, f"Atomix - {name}")
+        self = await get_create_playlist(owner, f"Mixify - {name}")
         self.__class__ = cls
         self.owner = owner
         self.name  = name
@@ -294,7 +294,7 @@ async def create_playlist_with_user(user_id):
     other.tracks = getattr(other, 'tracks', None) or set(await other.library.get_all_tracks())
     common = user.tracks & other.tracks
     tracks = list(sorted(common, key=lambda track: track.popularity))
-    playlist = await get_create_playlist(user, f"Atomix - {other.display_name}")
+    playlist = await get_create_playlist(user, f"Mixify - {other.display_name}")
     await playlist.add_tracks(*tracks)
     return jsonify(playlist.url)
 
