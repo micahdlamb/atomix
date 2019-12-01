@@ -48,6 +48,11 @@ export default function MatchCard({match}) {
     async function troll(){
         let track_uri = prompt("Enter track URI")
         if (!track_uri) return
+        if (track_uri.includes("https://open.spotify.com")){
+            let url = new URL(track_uri)
+            track_uri = url.pathname.replace("/track/", "")
+        }
+            
         let result = await model.play_track(match.user.id, track_uri)
         let variant = result === 'success' ? result : 'error'
         enqueueSnackbar(result, {variant})

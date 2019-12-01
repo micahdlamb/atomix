@@ -301,6 +301,8 @@ async def create_playlist_with_user(user_id):
 
 @app.route('/play_track/<user_id>/<track_uri>', methods=['PUT'])
 async def play_track(user_id, track_uri):
+    if not track_uri.startswith("spotify:track:"):
+        track_uri = "spotify:track:" + track_uri
     user = users[user_id]
     devices = await user.get_devices()
     phone = next((d for d in devices if d.type == 'Smartphone'), None)
