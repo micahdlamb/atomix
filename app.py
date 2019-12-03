@@ -89,7 +89,11 @@ async def spotify_authorized():
     if next == '/python_console':
         return "user = await User.from_code(spotify.Client(os.environ['SPOTIFY_CLIENT_ID'], os.environ['SPOTIFY_CLIENT_SECRET']), '"+code+"', redirect_uri=os.environ['SPOTIFY_REDIRECT_URI'])"
     client = spotify.Client(os.environ['SPOTIFY_CLIENT_ID'], os.environ['SPOTIFY_CLIENT_SECRET']) # This errors if constructed outside of route
-    user = await User.from_code(client, code, redirect_uri=os.environ['SPOTIFY_REDIRECT_URI'])
+    try:
+        user = await User.from_code(client, code, redirect_uri=os.environ['SPOTIFY_REDIRECT_URI'])
+    except spotify.errors.HTTPException:
+        # In case user navigates back here...  TODO prevent this from happening?
+        return redirect(next)
     users[user.id] = user
     session['user_id'] = user.id
     return redirect(next)
@@ -109,11 +113,8 @@ def login_as(user_id):
     session['user_id'] = user.id
     return user_to_dict(user)
 
-
 # API ##################################################################################################################
 
-# TODO users are sitting in here forever refreshing their tokens
-# Need to update spotify.py to refresh token when a request fails due to expired token
 users = {}
 
 def get_user() -> User:
@@ -141,7 +142,7 @@ class HostPlaylist(spotify.models.Playlist):
         return self
 
     async def join(self, user, tracks):
-        self.users[user] = tracks
+        self.users[user] = dedup(tracks)
         await self._update_tracks()
 
     async def leave(self, user):
@@ -249,7 +250,6 @@ async def join_playlist(playlist_id):
     else:
         tracks = await user.library.get_all_tracks()
 
-    user.tracks = set(tracks)
     await playlist.join(user, tracks)
     if user != playlist.owner:
         await user.follow_playlist(playlist)
@@ -267,12 +267,11 @@ async def leave_playlist(playlist_id):
 @require_user
 async def find_matched_users():
     user = get_user()
-    user.tracks = getattr(user, 'tracks', None) or set(await user.library.get_all_tracks())
-
+    user.tracks = getattr(user, 'tracks', None) or dedup(await user.library.get_all_tracks())
     matches = []
     for other in users.values():
         if other == user: continue
-        other.tracks = getattr(other, 'tracks', None) or set(await other.library.get_all_tracks())
+        other.tracks = getattr(other, 'tracks', None) or dedup(await other.library.get_all_tracks())
         common = user.tracks & other.tracks
         if not common: continue
         total_tracks = len(user.tracks) + len(other.tracks) - len(common)
@@ -290,12 +289,12 @@ async def find_matched_users():
 async def create_playlist_with_user(user_id):
     user = get_user()
     other = users[user_id]
-    user.tracks = getattr(user, 'tracks', None) or set(await user.library.get_all_tracks())
-    other.tracks = getattr(other, 'tracks', None) or set(await other.library.get_all_tracks())
+    user.tracks = getattr(user, 'tracks', None) or dedup(await user.library.get_all_tracks())
+    other.tracks = getattr(other, 'tracks', None) or dedup(await other.library.get_all_tracks())
     common = user.tracks & other.tracks
     tracks = list(sorted(common, key=lambda track: track.popularity))
     playlist = await get_create_playlist(user, f"Mixify - {other.display_name}")
-    await playlist.add_tracks(*tracks)
+    await playlist.replace_tracks(*tracks)
     return jsonify(playlist.url)
 
 
@@ -324,6 +323,16 @@ async def get_create_playlist(user, name):
     return await user.create_playlist(name) if playlist is None else playlist
 
 
+_seen = dict()
+def dedup(tracks):
+    def normalize(track):
+        key = f"{track.name}:{track.artists[0].name}"
+        # TODO spotify-dedup also makes sure track lengths are close
+        if key in _seen: return _seen[key]
+        _seen[key] = track
+        return track
+    return {normalize(track) for track in tracks}
+
 # Serve React App ######################################################################################################
 
 @app.route('/playlists')
@@ -340,7 +349,6 @@ def serve(path):
         return send_from_directory(app.static_folder, path)
     else:
         return send_from_directory(app.static_folder, 'index.html')
-
 
 # Persist ##############################################################################################################
 
@@ -374,7 +382,6 @@ def set_event_loop(loop):
     else:
         save_users()
 policy.set_event_loop = set_event_loop
-
 
 # Run ##################################################################################################################
 
