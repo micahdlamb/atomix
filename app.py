@@ -13,6 +13,8 @@ app.secret_key = 'sup3rsp1cy'
 # from quart_cors import cors
 # app = cors(app, allow_origin="*")
 
+client = None # Must be created after event loop set
+
 # OAuth ################################################################################################################
 
 # playlist-read-collaborative
@@ -88,7 +90,6 @@ async def spotify_authorized():
     next = session.get('next', '/')
     if next == '/python_console':
         return "user = await User.from_code(spotify.Client(os.environ['SPOTIFY_CLIENT_ID'], os.environ['SPOTIFY_CLIENT_SECRET']), '"+code+"', redirect_uri=os.environ['SPOTIFY_REDIRECT_URI'])"
-    client = spotify.Client(os.environ['SPOTIFY_CLIENT_ID'], os.environ['SPOTIFY_CLIENT_SECRET']) # This errors if constructed outside of route
     try:
         user = await User.from_code(client, code, redirect_uri=os.environ['SPOTIFY_REDIRECT_URI'])
     except spotify.errors.HTTPException:
@@ -323,13 +324,17 @@ async def get_create_playlist(user, name):
     return await user.create_playlist(name) if playlist is None else playlist
 
 
-_seen = dict()
+seen = dict()
 def dedup(tracks):
     def normalize(track):
-        key = f"{track.name}:{track.artists[0].name}"
-        # TODO spotify-dedup also makes sure track lengths are close
-        if key in _seen: return _seen[key]
-        _seen[key] = track
+        track_name, *type = track.name.rsplit(" - ", 1)
+        key = f"{track_name}:{track.artists[0].name}"
+        if key in seen: return seen[key]
+        # if type:
+        #     print(f'looking up {track_name}')
+        #     results = await client.search(f'track:"{track_name}"artist:"{track.artists[0].name}"')
+        #     track = next((track for track in results.tracks if track.name == track_name), track)
+        seen[key] = track
         return track
     return {normalize(track) for track in tracks}
 
@@ -366,7 +371,6 @@ async def restore_users():
         refresh_tokens = f.read().split()
 
     for token in refresh_tokens:
-        client = spotify.Client(os.environ['SPOTIFY_CLIENT_ID'], os.environ['SPOTIFY_CLIENT_SECRET'])
         user = await User.from_refresh_token(client, token)
         users[user.id] = user
 
@@ -378,6 +382,8 @@ _set_event_loop = policy.set_event_loop
 def set_event_loop(loop):
     _set_event_loop(loop)
     if loop:
+        global client
+        client = spotify.Client(os.environ['SPOTIFY_CLIENT_ID'], os.environ['SPOTIFY_CLIENT_SECRET'])
         loop.run_until_complete(restore_users())
     else:
         save_users()
