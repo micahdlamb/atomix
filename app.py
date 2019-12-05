@@ -143,7 +143,7 @@ class HostPlaylist(spotify.models.Playlist):
         return self
 
     async def join(self, user, tracks):
-        self.users[user] = dedup(tracks)
+        self.users[user] = tracks
         await self._update_tracks()
 
     async def leave(self, user):
@@ -172,6 +172,48 @@ class HostPlaylist(spotify.models.Playlist):
         )
 
 host_playlists : Dict[str, HostPlaylist] = {}
+
+
+async def get_create_playlist(user, name):
+    playlists = await user.get_all_playlists()
+    playlist = next((p for p in playlists if p.name == name and p.owner == user), None)
+    # Empty playlist is considered False!!!
+    return await user.create_playlist(name) if playlist is None else playlist
+
+
+class Track(spotify.models.Track):
+
+    @classmethod
+    def cast(cls, track):
+        track.__class__ = Track
+        track_name, *type = track.name.rsplit(" - ", 1)
+        track.key = f"{track_name}:{track.artists[0].name}"
+        return track
+
+    def __hash__(self):
+        return hash(self.key)
+
+    def __eq__(self, other):
+        return type(self) is type(other) and self.key == other.key
+
+
+async def get_tracks(user, take='likes'):
+    attr = f"tracks_{take}"
+    cached = getattr(user, attr, None)
+    if cached: return cached
+
+    if take == 'playlists':
+        playlists = await user.get_all_playlists()
+        owned = [p for p in playlists if p.owner == user]
+        tracks = [track for p in owned for track in await p.get_all_tracks()]
+        # Remove local songs
+        tracks = (track for track in tracks if track.uri.startswith("spotify:track"))
+    else:
+        tracks = await user.library.get_all_tracks()
+
+    tracks = {Track.cast(track) for track in tracks}
+    setattr(user, attr, tracks)
+    return tracks
 
 
 @app.route('/create_playlist/<name>', methods=['POST'])
@@ -241,16 +283,7 @@ def find_playlists():
 async def join_playlist(playlist_id):
     user = get_user()
     playlist = host_playlists[playlist_id]
-
-    if request.args.get('give') == 'playlists':
-        playlists = await user.get_all_playlists()
-        owned = [p for p in playlists if p.owner == user]
-        tracks = [track for p in owned for track in await p.get_all_tracks()]
-        # Remove local songs.  {} since song can be in multi playlists
-        tracks = {track for track in tracks if track.uri.startswith("spotify:track")}
-    else:
-        tracks = await user.library.get_all_tracks()
-
+    tracks = await get_tracks(user, request.args.get('give'))
     await playlist.join(user, tracks)
     if user != playlist.owner:
         await user.follow_playlist(playlist)
@@ -268,14 +301,14 @@ async def leave_playlist(playlist_id):
 @require_user
 async def find_matched_users():
     user = get_user()
-    user.tracks = getattr(user, 'tracks', None) or dedup(await user.library.get_all_tracks())
+    user_tracks = await get_tracks(user)
     matches = []
     for other in users.values():
         if other == user: continue
-        other.tracks = getattr(other, 'tracks', None) or dedup(await other.library.get_all_tracks())
-        common = user.tracks & other.tracks
+        other_tracks = await get_tracks(other)
+        common = user_tracks & other_tracks
         if not common: continue
-        total_tracks = len(user.tracks) + len(other.tracks) - len(common)
+        total_tracks = len(user_tracks) + len(other_tracks) - len(common)
         matches.append({
             'user': user_to_dict(other),
             'score': 100 * sum((101 - track.popularity)**.25 for track in common) / total_tracks**.25,
@@ -290,9 +323,9 @@ async def find_matched_users():
 async def create_playlist_with_user(user_id):
     user = get_user()
     other = users[user_id]
-    user.tracks = getattr(user, 'tracks', None) or dedup(await user.library.get_all_tracks())
-    other.tracks = getattr(other, 'tracks', None) or dedup(await other.library.get_all_tracks())
-    common = user.tracks & other.tracks
+    user_tracks = await get_tracks(user)
+    other_tracks = await get_tracks(other)
+    common = user_tracks & other_tracks
     tracks = list(sorted(common, key=lambda track: track.popularity))
     playlist = await get_create_playlist(user, f"Mixify - {other.display_name}")
     await playlist.replace_tracks(*tracks)
@@ -315,28 +348,6 @@ async def play_track(user_id, track_uri):
 to_floats = lambda val: val and [float(v) for v in val.split(",")]
 user_to_dict = lambda u: dict(id=u.id, display_name=u.display_name, image=u.images[0].url if u.images else None)
 track_to_dict = lambda t: dict(id=t.id, name=t.name, popularity=t.popularity)
-
-
-async def get_create_playlist(user, name):
-    playlists = await user.get_all_playlists()
-    playlist = next((p for p in playlists if p.name == name), None)
-    # Empty playlist is considered False!!!
-    return await user.create_playlist(name) if playlist is None else playlist
-
-
-seen = dict()
-def dedup(tracks):
-    def normalize(track):
-        track_name, *type = track.name.rsplit(" - ", 1)
-        key = f"{track_name}:{track.artists[0].name}"
-        if key in seen: return seen[key]
-        # if type:
-        #     print(f'looking up {track_name}')
-        #     results = await client.search(f'track:"{track_name}"artist:"{track.artists[0].name}"')
-        #     track = next((track for track in results.tracks if track.name == track_name), track)
-        seen[key] = track
-        return track
-    return {normalize(track) for track in tracks}
 
 # Serve React App ######################################################################################################
 
