@@ -1,6 +1,7 @@
 import os, functools, collections
 from typing import Dict
 from quart import Quart, jsonify, url_for, request, send_from_directory, redirect, session, abort
+import requests_async as requests
 import spotify
 from spotify.models import User
 
@@ -343,6 +344,23 @@ async def play_track(user_id, track_uri):
     player = await user.get_player()
     await player.play(track_uri, device=phone)
     return jsonify("success")
+
+
+@app.route('/beatsaver')
+@require_user
+async def find_beatsaver_matches():
+    user = get_user()
+    tracks = await get_tracks(user)
+    docs = []
+    keep = lambda song_name: any(track.name.rsplit(" - ", 1)[0] == song_name for track in tracks)
+    pages = request.args.get('pages', 10)
+    for page in range(pages):
+        resp = await requests.get(f'https://beatsaver.com/api/maps/hot/{page}')
+        json = resp.json()
+        docs.extend(doc for doc in json['docs'] if keep(doc['metadata']['songName']))
+        if json['nextPage'] is None:
+            break
+    return jsonify(docs)
 
 
 to_floats = lambda val: val and [float(v) for v in val.split(",")]
