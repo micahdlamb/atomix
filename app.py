@@ -48,22 +48,12 @@ playlist-modify-private
 playlist-modify-public
 playlist-read-private
 
-user-modify-playback-state
-user-read-currently-playing
-user-read-playback-state
-
 user-read-email
 
 user-library-read
 
 user-follow-modify
 user-follow-read
-
-user-read-recently-played
-user-top-read
-
-streaming
-app-remote-control
 """.split()
 oauth2 = spotify.OAuth2(os.environ['SPOTIFY_CLIENT_ID'], os.environ['SPOTIFY_REDIRECT_URI'], scopes=scopes)
 
