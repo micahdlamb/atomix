@@ -53,7 +53,7 @@ export default function MatchCard({match}) {
             track_uri = url.pathname.replace("/track/", "")
         }
             
-        let result = await model.play_track(match.user.id, track_uri)
+        let result = await model.playTrack(match.user.id, track_uri)
         let variant = result === 'success' ? result : 'error'
         enqueueSnackbar(result, {variant})
     }

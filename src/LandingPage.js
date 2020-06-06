@@ -78,9 +78,9 @@ export default function LandingPage(props) {
         <div className={classes.container}>
           <GridContainer>
             <GridItem xs={12} sm={12} md={6}>
-              <h1 className={classes.title}>Democracy in music</h1>
+              <h1 className={classes.title}>Connect Musically</h1>
               <h4>
-                Play the music your patrons like!
+                Create a music playlist everyone loves
               </h4>
               <br />
               <Button
@@ -136,9 +136,26 @@ function ProductSection() {
           <h2 className={classes.title}>How it works</h2>
           <h5 className={classes.description}>
             <List className={classes.list}>
-              <ListItem><ListItemText>Find common music with friends</ListItemText></ListItem>
-              <ListItem><ListItemText>Host a public playlist all attendees will love</ListItemText></ListItem>
-              <ListItem><ListItemText>Connect with users having most common musical tastes</ListItemText></ListItem>
+              <ListItem>
+                <div>
+                  <ListItemText>Create a music playlist everyone loves</ListItemText>
+                  <ul>
+                    <li>Login and goto /playlists page</li>
+                    <li>Enter name for playlist and click Create</li>
+                    <li>Share with friends using share button</li>
+                    <li>Open playlist in Spotify</li>
+                  </ul>
+                </div>
+              </ListItem>
+              <ListItem>
+                <div>
+                  <ListItemText>Connect with users having similar musical tastes</ListItemText>
+                  <ul>
+                    <li>Login and goto /find page</li>
+                    <li>View your top matches</li>
+                  </ul>
+                </div>
+              </ListItem>
             </List>
           </h5>
         </GridItem>

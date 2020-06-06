@@ -52,10 +52,17 @@ export function createPlaylistWithUser(user_id){
 }
 
 
-export function play_track(user_id, track_uri){
+export function playTrack(user_id, track_uri){
     return put(`/play_track/${user_id}/${track_uri}`)
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+export function findBeatSaverMatches(){
+    return get('/find_beatsaver_matches')
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 function get(url){
     return fetchJson('GET', url)

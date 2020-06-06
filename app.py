@@ -187,8 +187,8 @@ class Track(spotify.models.Track):
     @classmethod
     def cast(cls, track):
         track.__class__ = Track
-        track_name, *type = track.name.rsplit(" - ", 1)
-        track.key = f"{track_name}:{track.artists[0].name}"
+        track.base_name, *type = track.name.rsplit(" - ", 1)
+        track.key = f"{track.base_name}:{track.artists[0].name}"
         return track
 
     def __hash__(self):
@@ -346,32 +346,72 @@ async def play_track(user_id, track_uri):
     return jsonify("success")
 
 
-@app.route('/beatsaver')
+"""
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+docs = []
+for (var i=0; i < 2784; i++){
+    while (true){
+      try {
+        console.log(i)
+        json = await fetch(`https://beatsaver.com/api/maps/hot/${i}`).then(resp=>resp.json())
+        break
+      } catch (error){
+        await sleep(11*1000)
+      }
+    }
+    docs.push(...json.docs)
+}
+keep = docs.map(({downloadURL, coverURL, metadata: {songName, songAuthorName, duration, difficulties}}) => ({
+  id: downloadURL.split("/")[4],
+  coverURL,
+  songName,
+  songAuthorName,
+  duration,
+  difficulties: Object.entries(difficulties).filter(([name, exists]) => exists).map(([name, exists]) => name)
+}))
+console.log(JSON.stringify(keep))
+"""
+import json
+beatsaver_songs = json.loads(open("beatsaver_songs.json", encoding='utf-8').read())
+
+@app.route('/find_beatsaver_matches')
 @require_user
 async def find_beatsaver_matches():
     user = get_user()
     tracks = await get_tracks(user)
-    docs = []
-    keep = lambda song_name: any(track.name.rsplit(" - ", 1)[0] == song_name for track in tracks)
-    pages = request.args.get('pages', 10)
-    for page in range(pages):
-        resp = await requests.get(f'https://beatsaver.com/api/maps/hot/{page}')
-        json = resp.json()
-        docs.extend(doc for doc in json['docs'] if keep(doc['metadata']['songName']))
-        if json['nextPage'] is None:
-            break
-    return jsonify(docs)
+    map = groupby(tracks, lambda track: track.base_name.lower())
+    def keep(song):
+        song_name = song['songName'].lower()
+        try: tracks = map[song_name]
+        except: return False
+        # if song['duration'] != 0:
+        #     return any(close(song['duration']*1000, track.duration, 5) for track in tracks)
+        song_author = song['songAuthorName'].lower()
+        return any(song_author == artist.name.lower() for track in tracks for artist in track.artists)
+
+    return jsonify([song for song in beatsaver_songs if keep(song)])
 
 
-to_floats = lambda val: val and [float(v) for v in val.split(",")]
 user_to_dict = lambda u: dict(id=u.id, display_name=u.display_name, image=u.images[0].url if u.images else None)
 track_to_dict = lambda t: dict(id=t.id, name=t.name, popularity=t.popularity)
+to_floats = lambda val: val and [float(v) for v in val.split(",")]
+close = lambda v1, v2, eps: abs(v2-v1) < eps
+def groupby(lst, key):
+    groups = collections.defaultdict(list)
+    for item in lst:
+        groups[key(item)].append(item)
+    groups.default_factory = None
+    return groups
 
 # Serve React App ######################################################################################################
 
 @app.route('/playlists')
 @app.route('/find')
 @app.route('/join/<playlist_id>')
+@app.route('/beatsaver')
 @require_user
 def serve_protected(**_):
     return send_from_directory(app.static_folder, 'index.html', cache_timeout=0)

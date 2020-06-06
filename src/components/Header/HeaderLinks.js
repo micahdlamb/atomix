@@ -140,7 +140,7 @@ function Links(){
         color="transparent"
         className={classes.navLink}
       >
-        <icons.MusicNote className={classes.icons} /> Playlists
+        <icons.QueueMusic className={classes.icons} /> Playlists
       </Link>
     </ListItem>
     <ListItem className={classes.listItem}>
@@ -150,6 +150,15 @@ function Links(){
         className={classes.navLink}
       >
         <icons.Search className={classes.icons} /> Find
+      </Link>
+    </ListItem>
+    <ListItem className={classes.listItem}>
+      <Link
+        to="/beatsaver"
+        color="transparent"
+        className={classes.navLink}
+      >
+        <icons.MusicNote className={classes.icons} /> Beatsaver
       </Link>
     </ListItem>
   </> : <>
